@@ -1,15 +1,12 @@
 import express from 'express';
-import http from 'http';
-import { CONFIG } from '../config/index.js';
+import cookieParser from 'cookie-parser';
+import testRoute from './routes/testRoute.js';
 
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
 
-const server = http.createServer(app);
-
-server.listen(CONFIG.PORT, () => {
-  console.log(`Server running on http://${CONFIG.DOMAIN}:${CONFIG.PORT}`);
-});
+app.use('/api', testRoute);
 
 export default app;
