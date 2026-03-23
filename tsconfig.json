@@ -1,0 +1,36 @@
+{
+  // Visit https://aka.ms/tsconfig to read more about this file
+  "compilerOptions": {
+    // 기본 경로 및 빌드 설정
+    "rootDir": ".", // 루트 폴더
+    "outDir": "./dist", //컴파일 후 js 파일들이 생성되는 곳
+    "sourceMap": true,
+
+    // 환경 설정
+    "target": "es2023", //ES2023 문법 적용
+    "module": "nodenext", // package.json의 "type": "module"과 호환
+    "moduleResolution": "nodenext", // NodeNext 모듈 해석 방식 사용
+
+    // 라이브러리 및 타입
+    "lib": ["ES2023"],
+    "esModuleInterop": true, // ESM 구문
+
+    // Stricter Typechecking Options
+    "exactOptionalPropertyTypes": true,
+
+    // 타입 체크
+    "strict": true,
+    "noUncheckedIndexedAccess": true, // 배열/객체 접근 시 undefined 체크 강제 (안정성 향상)
+
+    // 모듈 안전 장치
+    "verbatimModuleSyntax": true, // import type 명시 강제
+    "noUncheckedSideEffectImports": true, // import 오타 방지
+
+    // 기타 옵션
+    "forceConsistentCasingInFileNames": true, // 파일명 대소문자 구분 강제
+    "skipLibCheck": true, // 라이브러리 타입 검사 건너뛰기 (빌드 속도 향상)
+    "moduleDetection": "force" // 모든 파일을 모듈로 인식
+  },
+  "include": ["src/**/*", "config/**/*"], // 컴파일할 파일들을 지정하는 속성 (와일드 카드 패턴으로 묶어 표현)
+  "exclude": ["node_modules", "dist"] // 컴파일 대상에서 제외할 파일들을 지정하는 속성
+}
