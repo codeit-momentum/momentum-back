@@ -1,47 +1,69 @@
 import type { Request, Response, NextFunction } from 'express';
-import { CONFIG } from '../../config/config.js';
 import { loginOrSignUp, reissueAccessToken } from '../services/authService.js';
 import { REFRESH_TOKEN_MAX_AGE } from '../constants/authConstants.js';
+import { CONFIG } from '../../config/config.js';
 
-// GET /api/auth/kakao — 카카오 로그인 페이지로 리다이렉트
-export const kakaoLogin = (req: Request, res: Response): void => {
+/**
+ * 카카오 로그인 페이지로 리디렉션 (프론트에서 하는 작업) (테스트용)
+ */
+export const redirectToKakaoLogin = (req: Request, res: Response): void => {
+  // const origin = (req.headers.origin as string) || 'http://localhost:3000'; // 요청 헤더의 Origin 감지 (기본 로컬)
+
+  // 동적으로 REDIRECT_URI 설정 (배포 주소가 있으면 해당 주소 사용, 없으면 로컬 사용)
+  // 현재 CONFIG에 설정된 기본값을 우선 사용하되, 필요에 따라 분기 로직을 추가할 수 있습니다.
+  const redirectUri = CONFIG.KAKAO_REDIRECT_URI;
+
   const kakaoAuthUrl =
-    `https://kauth.kakao.com/oauth/authorize` + // 카카오 OAuth 인증 URL
-    `?client_id=${CONFIG.KAKAO_REST_API_KEY}` + // REST API 키
-    `&redirect_uri=${CONFIG.KAKAO_REDIRECT_URI}` + // 콜백 URI
-    `&response_type=code`; // 인가 코드 요청
+    `https://kauth.kakao.com/oauth/authorize` +
+    `?response_type=code` +
+    `&client_id=${CONFIG.KAKAO_REST_API_KEY}` +
+    `&redirect_uri=${redirectUri}`;
 
-  res.redirect(kakaoAuthUrl); // 카카오 로그인 페이지로 이동
+  res.redirect(kakaoAuthUrl); // 사용자 브라우저를 카카오 로그인 페이지로 리디렉션
 };
 
-// GET /api/auth/kakao/callback — 카카오 인가 코드 콜백 처리
+/**
+ * 인가 코드 콜백 처리 (프론트에서 하는 작업) (테스트용)
+ */
+export const handleKakaoCallback = (req: Request, res: Response): void => {
+  const { code } = req.query;
+
+  if (!code) {
+    res.status(400).send('Authorization code not provided');
+    return;
+  }
+
+  // 받은 인가 코드를 클라이언트로 반환 (JSON 형태)
+  res.json({ authorization_code: code });
+};
+
+// POST /api/auth/kakao/login — 인가 코드로 처리 (로그인/회원가입)
 export const kakaoCallback = async (
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const code = req.query.code as string; // 카카오가 전달한 인가 코드
+    const { code } = req.body;
     if (!code) {
       res.status(400).json({ message: '인가 코드가 없습니다.' });
       return;
     }
 
     const { accessToken, refreshToken, user, isNewUser } =
-      await loginOrSignUp(code); // 로그인/회원가입 처리 및 토큰 발급
+      await loginOrSignUp(code);
 
     res.cookie('refreshToken', refreshToken, {
-      // refreshToken을 httpOnly 쿠키에 저장
-      httpOnly: true, // JS에서 접근 불가 (XSS 방지)
-      secure: process.env.NODE_ENV === 'production', // HTTPS에서만 전송 (프로덕션)
-      sameSite: 'strict', // CSRF 방지
-      maxAge: REFRESH_TOKEN_MAX_AGE, // 쿠키 만료: 7일
-      path: '/api/auth', // /api/auth 경로에서만 쿠키 전송
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: REFRESH_TOKEN_MAX_AGE,
+      path: '/api/auth',
     });
 
     res.json({
       message: isNewUser ? '회원가입 성공' : '로그인 성공',
-      accessToken, // 클라이언트에 accessToken 전달 (메모리/스토리지에 저장)
+      accessToken,
       user: {
         id: user.id,
         nickname: user.nickname,
@@ -51,32 +73,31 @@ export const kakaoCallback = async (
       },
     });
   } catch (err) {
-    next(err); // 에러를 Express 에러 핸들러로 전달
+    next(err);
   }
 };
 
-// POST /api/auth/refresh — refreshToken으로 accessToken 재발급
+// POST /api/auth/refresh — 리프레시 토큰으로 액세스 토큰 재발급
 export const refresh = (req: Request, res: Response): void => {
   try {
-    const refreshToken = req.cookies?.refreshToken as string | undefined; // 쿠키에서 refreshToken 추출
+    const refreshToken = req.cookies?.refreshToken as string | undefined;
     if (!refreshToken) {
       res.status(401).json({ message: '리프레시 토큰이 없습니다.' });
       return;
     }
 
-    const accessToken = reissueAccessToken(refreshToken); // refreshToken 검증 후 새 accessToken 발급
+    const accessToken = reissueAccessToken(refreshToken);
     res.json({ accessToken });
   } catch {
     res
       .status(401)
-      .json({ message: '리프레시 토큰이 만료되었거나 유효하지 않습니다.' }); // 검증 실패 (만료/변조)
+      .json({ message: '리프레시 토큰이 만료되었거나 유효하지 않습니다.' });
   }
 };
 
-// POST /api/auth/logout — refreshToken 쿠키 삭제
+// POST /api/auth/logout — 로그아웃
 export const logout = (req: Request, res: Response): void => {
   res.clearCookie('refreshToken', {
-    // 설정 시와 동일한 옵션으로 쿠키 삭제
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
