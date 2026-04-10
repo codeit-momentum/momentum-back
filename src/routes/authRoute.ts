@@ -1,6 +1,6 @@
 import express from 'express';
 import {
-  kakaoCallback,
+  kakaoLogin,
   refresh,
   logout,
   redirectToKakaoLogin,
@@ -13,8 +13,8 @@ const router = express.Router();
 router.get('/kakao', redirectToKakaoLogin); // 카카오 로그인 페이지로 리다이렉트
 router.get('/kakao/callback', handleKakaoCallback); // 인가 코드 수신 콜백
 
-// [메인] 서비스 인증 API
-router.post('/kakao/login', kakaoCallback); 
+// 서비스 인증 API
+router.post('/kakao/login', kakaoLogin);
 router.post('/refresh', refresh);
 router.post('/logout', logout);
 
