@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { loginOrSignUp, reissueAccessToken } from '../services/authService.js';
-import { REFRESH_TOKEN_MAX_AGE } from '../constants/authConstants.js';
 import { CONFIG } from '../../config/config.js';
+import { REFRESH_TOKEN_COOKIE_OPTIONS, DEFAULT_COOKIE_OPTIONS } from '../constants/cookieConfig.js';
 
 // 카카오 로그인 페이지로 리디렉션 (프론트에서 하는 작업) (테스트용)
 export const redirectToKakaoLogin = (req: Request, res: Response): void => {
@@ -22,7 +22,7 @@ export const handleKakaoCallback = (req: Request, res: Response): void => {
   const { code } = req.query;
 
   if (!code) {
-    res.status(400).json({ message: 'Authorization code not provided' });
+    res.status(400).json({ message: '인가 코드가 전달되지 않았습니다.' });
     return;
   }
 
@@ -41,33 +41,36 @@ export const kakaoLogin = async (req: Request, res: Response, next: NextFunction
 
     const { accessToken, refreshToken, user, isNewUser } = await loginOrSignUp(code);
 
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
-      maxAge: REFRESH_TOKEN_MAX_AGE,
-      path: '/',
-    });
+    res.cookie('refreshToken', refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
 
-    res.status(isNewUser ? 201 : 200).json({
-      message: isNewUser ? '회원가입이 완료되었습니다.' : '성공적으로 로그인되었습니다.',
-      data: {
-        accessToken,
-        user: {
-          id: user.id,
-          nickname: user.nickname,
-          email: user.email,
-          profile: user.profile,
-          userCode: user.userCode,
-        },
+    const responseData = {
+      accessToken,
+      user: {
+        id: user.id,
+        nickname: user.nickname,
+        email: user.email,
+        profile: user.profile,
+        userCode: user.userCode,
       },
-    });
+    };
+
+    if (isNewUser) {
+      res.status(201).json({
+        message: '회원가입이 완료되었습니다.',
+        data: responseData,
+      });
+    } else {
+      res.status(200).json({
+        message: '성공적으로 로그인되었습니다.',
+        data: responseData,
+      });
+    }
   } catch (err) {
     next(err);
   }
 };
 
-// POST /api/auth/refresh — 리프레시 토큰으로 액세스 토큰 재발급
+// 리프레시 토큰으로 액세스 토큰 재발급
 export const refresh = (req: Request, res: Response): void => {
   try {
     const refreshToken = req.cookies?.refreshToken as string | undefined;
@@ -83,13 +86,8 @@ export const refresh = (req: Request, res: Response): void => {
   }
 };
 
-// POST /api/auth/logout — 로그아웃
+// 로그아웃 (리프래시 토큰 삭제)
 export const logout = (req: Request, res: Response): void => {
-  res.clearCookie('refreshToken', {
-    httpOnly: true,
-    secure: false,
-    sameSite: 'strict',
-    path: '/api/auth',
-  });
+  res.clearCookie('refreshToken', DEFAULT_COOKIE_OPTIONS);
   res.json({ message: '로그아웃 성공' });
 };
