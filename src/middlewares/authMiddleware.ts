@@ -4,11 +4,7 @@ import { CONFIG } from '../../config/config.js';
 import type { JwtPayload } from '../types/auth.types.js';
 
 // 인증 미들웨어 — Authorization: Bearer <token> 검증
-export const authenticate = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void => {
+export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers.authorization; // Authorization 헤더 추출
   if (!authHeader?.startsWith('Bearer ')) {
     // Bearer 토큰 형식 확인
