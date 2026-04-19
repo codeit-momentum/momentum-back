@@ -8,7 +8,7 @@
     "dev": "nodemon --watch src --watch config --exec tsx src/server.ts",
     "start": "node dist/src/server.js",
     "build": "tsc",
-    "lint": "eslint . --fix'",
+    "lint": "eslint . --fix",
     "prettier": "prettier --write ."
   },
   "repository": {

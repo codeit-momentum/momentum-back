@@ -26,6 +26,9 @@ export async function getKakaoToken(code: string): Promise<string> {
   } catch (err) {
     if (axios.isAxiosError(err) && err.response?.data?.error === 'invalid_grant') {
       const error = new Error('만료되었거나 유효하지 않은 인가 코드입니다.') as Error & { code: string };
+      console.error('에러 코드:', err.response?.data?.error);
+      console.error('에러 설명:', err.response?.data?.error_description);
+      console.error('전달된 Redirect URI:', CONFIG.KAKAO_REDIRECT_URI);
       error.code = 'INVALID_AUTH_CODE';
       throw error;
     }
