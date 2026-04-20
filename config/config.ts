@@ -16,9 +16,4 @@ export const CONFIG = {
   PORT: Number(getEnv('PORT', '3000')),
   DOMAIN: getEnv('DOMAIN', 'localhost'),
   DATABASE_URL: getEnv('DATABASE_URL'),
-  KAKAO_REST_API_KEY: getEnv('KAKAO_REST_API_KEY'),
-  KAKAO_CLIENT_SECRET: getEnv('KAKAO_CLIENT_SECRET'),
-  KAKAO_REDIRECT_URI: getEnv('KAKAO_REDIRECT_URI'),
-  JWT_SECRET: getEnv('JWT_SECRET'),
-  JWT_REFRESH_SECRET: getEnv('JWT_REFRESH_SECRET'),
 } as const;
