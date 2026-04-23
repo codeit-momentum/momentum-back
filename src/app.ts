@@ -11,5 +11,7 @@ app.use(cookieParser());
 
 app.use('/api', testRoute);
 app.use('/api/v1/buckets', bucketRoute);
+
 app.use(errorMiddleware);
+
 export default app;

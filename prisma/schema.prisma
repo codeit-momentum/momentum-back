@@ -23,5 +23,50 @@ model User {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   isKnocked  Boolean  @default(true)
+
+  buckets Bucket[]  
+  moments Moment[]  
+
   @@map("user") // MongoDB 컬렉션 이름을 "user"로 지정
+}
+
+model Bucket {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  userID         String
+  title          String
+  category       String[]  @default([])
+  thumbnail      String    @default("기본이미지URL")
+  totalMoment    Float     @default(0)
+  completedCount Float     @default(0)
+  isCompleted    Boolean   @default(false)
+  isChallenging  Boolean   @default(false)
+  startDate      DateTime?
+  endDate        DateTime?
+  totalCheer     Float     @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user    User     @relation(fields: [userID], references: [id])
+  moments Moment[]
+
+  @@map("bucket")
+}
+
+
+model Moment {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  bucketID    String   @db.ObjectId
+  userID      String
+  momentTitle String
+  isCompleted Boolean  @default(false)
+  photoUrl    String   @default("")
+  startDate   DateTime @default(now())
+  endDate     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bucket Bucket @relation(fields: [bucketID], references: [id])
+  user   User   @relation(fields: [userID], references: [id])
+
+  @@map("moment")
 }
