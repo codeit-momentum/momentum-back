@@ -3,9 +3,9 @@ import { prisma } from '../lib/prisma.js';
 interface CreateBucketParams {
   userID: string;
   title: string;
-  category?: string[];
-  startDate?: Date;
-  endDate?: Date;
+  category?: string[] | undefined;
+  startDate?: Date | undefined;
+  endDate?: Date | undefined;
 }
 
 interface GetBucketDetailParams {

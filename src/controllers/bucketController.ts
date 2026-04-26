@@ -1,13 +1,17 @@
 import type { NextFunction, Request, Response } from 'express';
 import {
-    challengeBucket,
-    createBucket,
-    getBucketDetail,
-    getBucketsByUser,
-    getChallengingBucketCount,
-    successBucket,
-    unChallengeBucket,
+  challengeBucket,
+  createBucket,
+  getBucketDetail,
+  getBucketsByUser,
+  getChallengingBucketCount,
+  successBucket,
+  unChallengeBucket,
 } from '../services/bucketService.js';
+
+import { BUCKET_CATEGORIES } from '../constants/bucketConstants.js';
+
+
 
 export const createBucketController = async (
   req: Request,
@@ -17,23 +21,63 @@ export const createBucketController = async (
   try {
     const userID = req.userId!;
     const { title, category, startDate, endDate } = req.body as {
-      title: string;
-      category?: string[];
-      startDate?: string;
-      endDate?: string;
+      title: string | undefined;
+      category?: string[] | undefined;
+      startDate?: string | undefined;
+      endDate?: string | undefined;
     };
 
+    // title 필수 체크
     if (!title || title.trim() === '') {
       res.status(400).json({ message: '버킷리스트 제목은 필수입니다.' });
       return;
     }
 
+    // title 길이 제한
+    if (title.trim().length > 50) {
+      res.status(400).json({ message: '버킷리스트 제목은 50자 이내여야 합니다.' });
+      return;
+    }
+
+    // category 유효성 체크
+    if (category !== undefined) {
+      const invalidCategories = category.filter(
+        (c) => !BUCKET_CATEGORIES.includes(c as typeof BUCKET_CATEGORIES[number])
+      );
+      if (invalidCategories.length > 0) {
+        res.status(400).json({
+          message: `유효하지 않은 카테고리입니다. 가능한 카테고리: ${BUCKET_CATEGORIES.join(', ')}`,
+        });
+        return;
+      }
+    }
+
+    // startDate 유효성 체크
+    if (startDate !== undefined && isNaN(new Date(startDate).getTime())) {
+      res.status(400).json({ message: '시작 날짜 형식이 올바르지 않습니다.' });
+      return;
+    }
+
+    // endDate 유효성 체크
+    if (endDate !== undefined && isNaN(new Date(endDate).getTime())) {
+      res.status(400).json({ message: '종료 날짜 형식이 올바르지 않습니다.' });
+      return;
+    }
+
+    // startDate > endDate 체크
+    if (startDate !== undefined && endDate !== undefined) {
+      if (new Date(startDate) > new Date(endDate)) {
+        res.status(400).json({ message: '시작 날짜는 종료 날짜보다 이전이어야 합니다.' });
+        return;
+      }
+    }
+
     const data = await createBucket({
       userID,
       title: title.trim(),
-      category,
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
+      category: category ?? [],
+      startDate: startDate !== undefined ? new Date(startDate) : undefined,
+      endDate: endDate !== undefined ? new Date(endDate) : undefined,
     });
 
     res.status(201).json({ message: '버킷리스트가 생성되었습니다.', data });
@@ -41,6 +85,8 @@ export const createBucketController = async (
     next(err);
   }
 };
+
+
 
 export const getBucketDetailController = async (
   req: Request,
