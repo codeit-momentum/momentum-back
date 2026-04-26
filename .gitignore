@@ -11,3 +11,6 @@ http/
 /generated/prisma
 
 /generated/prisma
+
+#.cursor
+/.cursor
