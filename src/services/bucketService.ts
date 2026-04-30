@@ -182,8 +182,7 @@ export const challengeBucket = async (params: BucketMutateParams) => {
   if (bucket.userID !== requestUserID) throw createError('본인의 버킷리스트만 수정할 수 있습니다.', 403);
   if (bucket.isCompleted) throw createError('이미 달성된 버킷리스트는 활성화할 수 없습니다.', 400);
   if (bucket.isChallenging) throw createError('이미 진행 중인 버킷리스트입니다.', 400);
-  if (bucket.totalMoment === 0) throw createError('모멘트가 없는 버킷리스트는 활성화할 수 없습니다.', 400);
-
+  
   return await prisma.bucket.update({
     where: { id: bucketID },
     data: { isChallenging: true },
