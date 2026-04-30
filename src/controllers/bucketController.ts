@@ -153,6 +153,20 @@ export const getBucketsByUserController = async (
   }
 };
 
+export const getChallengingBucketCountController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { userID } = req.params as { userID: string };
+    const data = await getChallengingBucketCount({ userID });
+    res.status(200).json({ message: '진행 중인 버킷리스트 개수 조회 성공', data });
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 export const challengeBucketController = async (
   req: Request,
@@ -179,20 +193,6 @@ export const unChallengeBucketController = async (
     const requestUserID = req.userId!;
     const data = await unChallengeBucket({ bucketID, requestUserID });
     res.status(200).json({ message: '버킷리스트를 비활성화하였습니다.', data });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const getChallengingBucketCountController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const { userID } = req.params as { userID: string };
-    const data = await getChallengingBucketCount({ userID });
-    res.status(200).json({ message: '진행 중인 버킷리스트 개수 조회 성공', data });
   } catch (err) {
     next(err);
   }

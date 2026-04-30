@@ -162,19 +162,27 @@ export const getBucketsByUser = async (params: GetBucketsParams) => {
   return buckets;
 };
 
-// 버킷리스트 활성화
+
+//버킷리스트 활성화
 export const challengeBucket = async (params: BucketMutateParams) => {
   const { bucketID, requestUserID } = params;
 
   const bucket = await prisma.bucket.findUnique({
     where: { id: bucketID },
-    select: { id: true, userID: true, isCompleted: true, isChallenging: true },
+    select: {
+      id: true,
+      userID: true,
+      isCompleted: true,
+      isChallenging: true,
+      totalMoment: true,
+    },
   });
 
   if (!bucket) throw createError('버킷리스트를 찾을 수 없습니다.', 404);
   if (bucket.userID !== requestUserID) throw createError('본인의 버킷리스트만 수정할 수 있습니다.', 403);
   if (bucket.isCompleted) throw createError('이미 달성된 버킷리스트는 활성화할 수 없습니다.', 400);
   if (bucket.isChallenging) throw createError('이미 진행 중인 버킷리스트입니다.', 400);
+  if (bucket.totalMoment === 0) throw createError('모멘트가 없는 버킷리스트는 활성화할 수 없습니다.', 400);
 
   return await prisma.bucket.update({
     where: { id: bucketID },
@@ -185,18 +193,27 @@ export const challengeBucket = async (params: BucketMutateParams) => {
       title: true,
       isCompleted: true,
       isChallenging: true,
+      totalMoment: true,
+      completedCount: true,
       updatedAt: true,
     },
   });
 };
 
+
 // 버킷리스트 비활성화
+
 export const unChallengeBucket = async (params: BucketMutateParams) => {
   const { bucketID, requestUserID } = params;
 
   const bucket = await prisma.bucket.findUnique({
     where: { id: bucketID },
-    select: { id: true, userID: true, isCompleted: true, isChallenging: true },
+    select: {
+      id: true,
+      userID: true,
+      isCompleted: true,
+      isChallenging: true,
+    },
   });
 
   if (!bucket) throw createError('버킷리스트를 찾을 수 없습니다.', 404);
@@ -213,25 +230,34 @@ export const unChallengeBucket = async (params: BucketMutateParams) => {
       title: true,
       isCompleted: true,
       isChallenging: true,
+      totalMoment: true,
+      completedCount: true,
       updatedAt: true,
     },
   });
 };
 
+
 // 진행 중인 버킷리스트 개수 조회
 export const getChallengingBucketCount = async (params: GetBucketsParams) => {
   const { userID } = params;
 
-  const user = await prisma.user.findUnique({
-    where: { id: userID },
-    select: { id: true },
-  });
+  // 유저 확인 + count 병렬 처리
+  const [user, count] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userID },
+      select: { id: true },
+    }),
+    prisma.bucket.count({
+      where: {
+        userID,
+        isChallenging: true,
+        isCompleted: false,
+      },
+    }),
+  ]);
 
   if (!user) throw createError('존재하지 않는 유저입니다.', 404);
-
-  const count = await prisma.bucket.count({
-    where: { userID, isChallenging: true, isCompleted: false },
-  });
 
   return { userID, challengingCount: count };
 };
