@@ -5,7 +5,6 @@ import {
   getBucketDetail,
   getBucketsByUser,
   getChallengingBucketCount,
-  successBucket,
   unChallengeBucket,
 } from '../services/bucketService.js';
 
@@ -116,7 +115,6 @@ export const getBucketDetailController = async (
 };
 
 
-
 export const getBucketsByUserController = async (
   req: Request,
   res: Response,
@@ -124,6 +122,7 @@ export const getBucketsByUserController = async (
 ): Promise<void> => {
   try {
     const { userID } = req.params as { userID: string };
+    const { status } = req.query as { status?: string };
 
     // userID 유효성 체크
     if (!userID || userID.trim() === '') {
@@ -131,35 +130,29 @@ export const getBucketsByUserController = async (
       return;
     }
 
-    // userID 숫자 형식 체크 (카카오 ID는 숫자형 문자열)
+    // userID 숫자 형식 체크
     if (!/^\d+$/.test(userID)) {
       res.status(400).json({ message: '유효하지 않은 유저 ID 형식입니다.' });
       return;
     }
 
-    const data = await getBucketsByUser({ userID });
+    // status 유효성 체크
+    if (status !== undefined && status !== 'completed' && status !== 'challenging') {
+      res.status(400).json({
+        message: 'status는 completed 또는 challenging만 가능합니다.',
+      });
+      return;
+    }
+
+    const data = await getBucketsByUser({ userID, status });
+
+    // 조회 결과 없을 때 빈 배열 반환
     res.status(200).json({ message: '버킷리스트 목록 조회 성공', data });
   } catch (err) {
     next(err);
   }
 };
 
-
-
-export const successBucketController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const { bucketID } = req.params as { bucketID: string };
-    const requestUserID = req.userId!;
-    const data = await successBucket({ bucketID, requestUserID });
-    res.status(200).json({ message: '버킷리스트를 달성하였습니다.', data });
-  } catch (err) {
-    next(err);
-  }
-};
 
 export const challengeBucketController = async (
   req: Request,

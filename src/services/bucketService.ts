@@ -95,8 +95,12 @@ export const getBucketDetail = async (params: GetBucketDetailParams) => {
 };
 
 // 버킷리스트 전체 조회 (본인 + 타인)
+interface GetBucketsParams {
+  userID: string;
+  status?: 'completed' | 'challenging' | undefined;
+}
 export const getBucketsByUser = async (params: GetBucketsParams) => {
-  const { userID } = params;
+  const { userID, status } = params;
 
   const user = await prisma.user.findUnique({
     where: { id: userID },
@@ -105,8 +109,20 @@ export const getBucketsByUser = async (params: GetBucketsParams) => {
 
   if (!user) throw createError('존재하지 않는 유저입니다.', 404);
 
-  return await prisma.bucket.findMany({
-    where: { userID },
+  const whereCondition = {
+    userID,
+    ...(status === 'completed' && {
+      isCompleted: true,
+      isChallenging: false,
+    }),
+    ...(status === 'challenging' && {
+      isChallenging: true,
+      isCompleted: false,
+    }),
+  };
+
+  const buckets = await prisma.bucket.findMany({
+    where: whereCondition,
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
@@ -125,49 +141,25 @@ export const getBucketsByUser = async (params: GetBucketsParams) => {
       updatedAt: true,
     },
   });
-};
 
-// 버킷리스트 달성
-export const successBucket = async (params: BucketMutateParams) => {
-  const { bucketID, requestUserID } = params;
+  // completed: completedCount === totalMoment 검증
+  if (status === 'completed') {
+    return buckets.filter(
+      (bucket) =>
+        bucket.completedCount === bucket.totalMoment &&
+        bucket.totalMoment > 0, // 모멘트가 하나도 없는 버킷은 제외
+    );
+  }
 
-  const bucket = await prisma.bucket.findUnique({
-    where: { id: bucketID },
-    select: { id: true, userID: true, isCompleted: true },
-  });
+  // challenging: completedCount !== totalMoment 검증 (절대 같으면 안됨)
+  if (status === 'challenging') {
+    return buckets.filter(
+      (bucket) =>
+        bucket.completedCount !== bucket.totalMoment,
+    );
+  }
 
-  if (!bucket) throw createError('버킷리스트를 찾을 수 없습니다.', 404);
-  if (bucket.userID !== requestUserID) throw createError('본인의 버킷리스트만 수정할 수 있습니다.', 403);
-  if (bucket.isCompleted) throw createError('이미 달성된 버킷리스트입니다.', 400);
-
-  const totalMoments = await prisma.moment.count({ where: { bucketID } });
-
-  const [updatedBucket] = await prisma.$transaction([
-    prisma.bucket.update({
-      where: { id: bucketID },
-      data: {
-        isCompleted: true,
-        isChallenging: false,
-        completedCount: totalMoments,
-      },
-      select: {
-        id: true,
-        userID: true,
-        title: true,
-        isCompleted: true,
-        isChallenging: true,
-        completedCount: true,
-        totalMoment: true,
-        updatedAt: true,
-      },
-    }),
-    prisma.moment.updateMany({
-      where: { bucketID, isCompleted: false },
-      data: { isCompleted: true },
-    }),
-  ]);
-
-  return updatedBucket;
+  return buckets;
 };
 
 // 버킷리스트 활성화
