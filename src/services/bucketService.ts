@@ -94,7 +94,7 @@ export const getBucketDetail = async (params: GetBucketDetailParams) => {
   return bucket;
 };
 
-// 버킷리스트 전체 조회 (본인 + 타인)
+// 버킷리스트 전체 조회
 interface GetBucketsParams {
   userID: string;
   status?: 'completed' | 'challenging' | undefined;
@@ -142,7 +142,7 @@ export const getBucketsByUser = async (params: GetBucketsParams) => {
     },
   });
 
-  // completed: completedCount === totalMoment 검증
+
   if (status === 'completed') {
     return buckets.filter(
       (bucket) =>
@@ -151,7 +151,7 @@ export const getBucketsByUser = async (params: GetBucketsParams) => {
     );
   }
 
-  // challenging: completedCount !== totalMoment 검증 (절대 같으면 안됨)
+  
   if (status === 'challenging') {
     return buckets.filter(
       (bucket) =>
@@ -201,7 +201,6 @@ export const challengeBucket = async (params: BucketMutateParams) => {
 
 
 // 버킷리스트 비활성화
-
 export const unChallengeBucket = async (params: BucketMutateParams) => {
   const { bucketID, requestUserID } = params;
 
@@ -241,7 +240,6 @@ export const unChallengeBucket = async (params: BucketMutateParams) => {
 export const getChallengingBucketCount = async (params: GetBucketsParams) => {
   const { userID } = params;
 
-  // 유저 확인 + count 병렬 처리
   const [user, count] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userID },

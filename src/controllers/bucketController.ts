@@ -11,7 +11,7 @@ import {
 import { BUCKET_CATEGORIES } from '../constants/bucketConstants.js';
 
 
-
+// 버킷 생성 컨트롤러
 export const createBucketController = async (
   req: Request,
   res: Response,
@@ -86,7 +86,7 @@ export const createBucketController = async (
 };
 
 
-
+// 버킷 상세 조회 컨트롤러
 export const getBucketDetailController = async (
   req: Request,
   res: Response,
@@ -115,6 +115,8 @@ export const getBucketDetailController = async (
 };
 
 
+
+// 버킷 전체 조회 컨트롤러
 export const getBucketsByUserController = async (
   req: Request,
   res: Response,
@@ -153,6 +155,8 @@ export const getBucketsByUserController = async (
   }
 };
 
+
+// 진행 중인 버킷 count 컨트롤러
 export const getChallengingBucketCountController = async (
   req: Request,
   res: Response,
@@ -168,6 +172,8 @@ export const getChallengingBucketCountController = async (
 };
 
 
+
+// 버킷 활성화 컨트롤러
 export const challengeBucketController = async (
   req: Request,
   res: Response,
@@ -183,6 +189,9 @@ export const challengeBucketController = async (
   }
 };
 
+
+
+// 버킷 비활성화 컨트롤러
 export const unChallengeBucketController = async (
   req: Request,
   res: Response,
