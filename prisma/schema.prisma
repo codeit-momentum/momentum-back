@@ -15,7 +15,7 @@ datasource db {
 }
 
 model User {
-  id         String   @id @map("_id") 
+  id         String   @id @map("_id")
   nickname   String
   email      String   @unique
   profile    String   @default("기본이미지")
@@ -23,9 +23,11 @@ model User {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   isKnocked  Boolean  @default(true)
+  isAgreed   Boolean  @default(false) // 약관 동의 완료 여부 (필수 약관 모두 동의 시 true)
 
-  buckets Bucket[]  
-  moments Moment[]  
+  buckets   Bucket[]
+  moments   Moment[]
+  userTerms UserTerm[]
 
   @@map("user") // MongoDB 컬렉션 이름을 "user"로 지정
 }
@@ -38,7 +40,25 @@ model Term {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  userTerms UserTerm[]
+
   @@map("term") // MongoDB 컬렉션 이름을 "term"로 지정
+}
+
+model UserTerm {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userID    String
+  termID    String   @db.ObjectId
+  agreed    Boolean  @default(false)
+  agreedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userID], references: [id])
+  term Term @relation(fields: [termID], references: [id])
+
+  @@unique([userID, termID])
+  @@map("userTerm")
 }
 
 model Bucket {

@@ -9,6 +9,7 @@ import {
 } from '../services/bucketService.js';
 
 import { BUCKET_CATEGORIES } from '../constants/bucketConstants.js';
+import { isObjectId } from '../utils/validators.js';
 
 
 // 버킷 생성 컨트롤러
@@ -101,8 +102,8 @@ export const getBucketDetailController = async (
       return;
     }
 
-    // MongoDB ObjectId 형식 체크 (24자리 hex 문자열)
-    if (!/^[a-f\d]{24}$/i.test(bucketID)) {
+    // MongoDB ObjectId 형식 체크
+    if (!isObjectId(bucketID)) {
       res.status(400).json({ message: '유효하지 않은 버킷 ID 형식입니다.' });
       return;
     }
