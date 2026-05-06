@@ -9,8 +9,8 @@ export const listTerms = async (req: Request, res: Response, next: NextFunction)
       return;
     }
 
-    if (rawType !== undefined && rawType !== '필수' && rawType !== '선택') {
-      res.status(400).json({ message: 'type은 "필수" 또는 "선택"만 가능합니다.' });
+    if (rawType !== undefined && rawType !== 'REQUIRED' && rawType !== 'OPTIONAL') {
+      res.status(400).json({ message: 'type은 "REQUIRED" 또는 "OPTIONAL"만 가능합니다.' });
       return;
     }
 
@@ -59,6 +59,8 @@ export const agreeTerms = async (req: Request, res: Response, next: NextFunction
         },
         agreedTerms: user.userTerms.map((ut) => ({
           termID: ut.termID,
+          name: ut.term.name,
+          type: ut.term.type,
           agreedAt: ut.agreedAt,
         })),
       },
@@ -70,19 +72,19 @@ export const agreeTerms = async (req: Request, res: Response, next: NextFunction
 
 export const getTerm = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const rawId = (req.params as unknown as { id?: string | string[] }).id;
-    if (!rawId) {
+    const rawTermID = (req.params as unknown as { termID?: string | string[] }).termID;
+    if (!rawTermID) {
       res.status(400).json({ message: '약관 ID가 필요합니다.' });
       return;
     }
 
-    if (Array.isArray(rawId)) {
+    if (Array.isArray(rawTermID)) {
       res.status(400).json({ message: '약관 ID는 1개만 전달할 수 있습니다.' });
       return;
     }
 
-    const id = rawId;
-    const term = await getTermById(id);
+    const termID = rawTermID;
+    const term = await getTermById(termID);
     res.status(200).json({
       message: '약관 조회 성공',
       data: { term },
@@ -91,4 +93,3 @@ export const getTerm = async (req: Request, res: Response, next: NextFunction): 
     next(err);
   }
 };
-

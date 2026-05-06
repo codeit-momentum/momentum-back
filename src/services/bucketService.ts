@@ -5,12 +5,7 @@ import type {
   GetBucketDetailParams,
   GetBucketsParams,
 } from '../types/bucket.types.js';
-
-const createError = (message: string, statusCode: number): Error => {
-  const error = new Error(message) as Error & { statusCode: number };
-  error.statusCode = statusCode;
-  return error;
-};
+import { createError } from '../utils/createError.js';
 
 // 버킷리스트 생성
 export const createBucket = async (params: CreateBucketParams) => {
