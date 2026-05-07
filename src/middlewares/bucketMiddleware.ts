@@ -1,22 +1,17 @@
 import type { NextFunction, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { isObjectId } from '../utils/validators.js';
 
-
-export const validateBucketID = (
-  req: Request<{ bucketID: string }>,
-  res: Response,
-  next: NextFunction,
-): void => {
+export const validateBucketID = (req: Request<{ bucketID: string }>, res: Response, next: NextFunction): void => {
   const { bucketID } = req.params;
 
-  if (!bucketID || !/^[a-f\d]{24}$/i.test(bucketID)) {
+  if (!isObjectId(bucketID)) {
     res.status(400).json({ message: '유효하지 않은 버킷 ID 형식입니다.' });
     return;
   }
 
   next();
 };
-
 
 export const validateBucketOwner = async (
   req: Request<{ bucketID: string }>,

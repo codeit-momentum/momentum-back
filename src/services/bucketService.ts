@@ -1,31 +1,11 @@
 import { prisma } from '../lib/prisma.js';
-
-interface CreateBucketParams {
-  userID: string;
-  title: string;
-  category?: string[] | undefined;
-  startDate?: Date | undefined;
-  endDate?: Date | undefined;
-}
-
-interface GetBucketDetailParams {
-  bucketID: string;
-}
-
-interface GetBucketsParams {
-  userID: string;
-}
-
-interface BucketMutateParams {
-  bucketID: string;
-  requestUserID: string;
-}
-
-const createError = (message: string, statusCode: number): Error => {
-  const error = new Error(message) as Error & { statusCode: number };
-  error.statusCode = statusCode;
-  return error;
-};
+import type {
+  BucketMutateParams,
+  CreateBucketParams,
+  GetBucketDetailParams,
+  GetBucketsParams,
+} from '../types/bucket.types.js';
+import { createError } from '../utils/createError.js';
 
 // 버킷리스트 생성
 export const createBucket = async (params: CreateBucketParams) => {
@@ -95,10 +75,6 @@ export const getBucketDetail = async (params: GetBucketDetailParams) => {
 };
 
 // 버킷리스트 전체 조회
-interface GetBucketsParams {
-  userID: string;
-  status?: 'completed' | 'challenging' | undefined;
-}
 export const getBucketsByUser = async (params: GetBucketsParams) => {
   const { userID, status } = params;
 
@@ -142,26 +118,18 @@ export const getBucketsByUser = async (params: GetBucketsParams) => {
     },
   });
 
-
   if (status === 'completed') {
     return buckets.filter(
-      (bucket) =>
-        bucket.completedCount === bucket.totalMoment &&
-        bucket.totalMoment > 0, // 모멘트가 하나도 없는 버킷은 제외
+      (bucket) => bucket.completedCount === bucket.totalMoment && bucket.totalMoment > 0, // 모멘트가 하나도 없는 버킷은 제외
     );
   }
 
-  
   if (status === 'challenging') {
-    return buckets.filter(
-      (bucket) =>
-        bucket.completedCount !== bucket.totalMoment,
-    );
+    return buckets.filter((bucket) => bucket.completedCount !== bucket.totalMoment);
   }
 
   return buckets;
 };
-
 
 //버킷리스트 활성화
 export const challengeBucket = async (params: BucketMutateParams) => {
@@ -182,7 +150,7 @@ export const challengeBucket = async (params: BucketMutateParams) => {
   if (bucket.userID !== requestUserID) throw createError('본인의 버킷리스트만 수정할 수 있습니다.', 403);
   if (bucket.isCompleted) throw createError('이미 달성된 버킷리스트는 활성화할 수 없습니다.', 400);
   if (bucket.isChallenging) throw createError('이미 진행 중인 버킷리스트입니다.', 400);
-  
+
   return await prisma.bucket.update({
     where: { id: bucketID },
     data: { isChallenging: true },
@@ -198,7 +166,6 @@ export const challengeBucket = async (params: BucketMutateParams) => {
     },
   });
 };
-
 
 // 버킷리스트 비활성화
 export const unChallengeBucket = async (params: BucketMutateParams) => {
@@ -234,7 +201,6 @@ export const unChallengeBucket = async (params: BucketMutateParams) => {
     },
   });
 };
-
 
 // 진행 중인 버킷리스트 개수 조회
 export const getChallengingBucketCount = async (params: GetBucketsParams) => {

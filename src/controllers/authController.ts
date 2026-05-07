@@ -45,18 +45,25 @@ export const kakaoLogin = async (req: Request, res: Response, next: NextFunction
 
     const responseData = {
       accessToken,
+      isAgreed: user.isAgreed, // isAgreed=false인 경우 약관 동의 화면으로 분기
       user: {
         id: user.id,
         nickname: user.nickname,
         email: user.email,
         profile: user.profile,
         userCode: user.userCode,
+        isAgreed: user.isAgreed,
       },
     };
 
     if (isNewUser) {
       res.status(201).json({
-        message: '회원가입이 완료되었습니다.',
+        message: '회원가입이 완료되었습니다. 약관 동의가 필요합니다.',
+        data: responseData,
+      });
+    } else if (!user.isAgreed) {
+      res.status(200).json({
+        message: '로그인되었습니다. 약관 동의가 필요합니다.',
         data: responseData,
       });
     } else {

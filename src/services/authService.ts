@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma.js';
 import { CONFIG } from '../../config/config.js';
 import { ACCESS_TOKEN_EXPIRES_IN, REFRESH_TOKEN_EXPIRES_IN } from '../constants/authConstants.js';
 import type { KakaoTokenResponse, KakaoUserInfo, JwtPayload, TokenPair } from '../types/auth.types.js';
+import { createError } from '../utils/createError.js';
 import { generateUserCode, generateNickname } from '../utils/generators.js';
 
 // 인가 코드로 카카오 액세스 토큰 발급 (서버 간 통신)
@@ -25,7 +26,7 @@ export async function getKakaoToken(code: string): Promise<string> {
     return data.access_token;
   } catch (err) {
     if (axios.isAxiosError(err) && err.response?.data?.error === 'invalid_grant') {
-      const error = new Error('만료되었거나 유효하지 않은 인가 코드입니다.') as Error & { code: string };
+      const error = createError('만료되었거나 유효하지 않은 인가 코드입니다.', 401);
       error.code = 'INVALID_AUTH_CODE';
       throw error;
     }
