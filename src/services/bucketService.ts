@@ -28,16 +28,24 @@ const createError = (message: string, statusCode: number): Error => {
 };
 
 // 버킷리스트 생성
+interface CreateBucketParams {
+  userID: string;
+  title: string;
+}
+
 export const createBucket = async (params: CreateBucketParams) => {
-  const { userID, title, category, startDate, endDate } = params;
+  const { userID, title } = params;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userID },
+    select: { id: true },
+  });
+  if (!user) throw createError('존재하지 않는 유저입니다.', 404);
 
   return await prisma.bucket.create({
     data: {
       userID,
       title,
-      category: category ?? [],
-      startDate: startDate ?? null,
-      endDate: endDate ?? null,
     },
     select: {
       id: true,

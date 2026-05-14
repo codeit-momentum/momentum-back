@@ -1,14 +1,13 @@
 import type { NextFunction, Request, Response } from 'express';
 import {
-  challengeBucket,
-  createBucket,
-  getBucketDetail,
-  getBucketsByUser,
-  getChallengingBucketCount,
-  unChallengeBucket,
+    challengeBucket,
+    createBucket,
+    getBucketDetail,
+    getBucketsByUser,
+    getChallengingBucketCount,
+    unChallengeBucket,
 } from '../services/bucketService.js';
 
-import { BUCKET_CATEGORIES } from '../constants/bucketConstants.js';
 
 
 // 버킷 생성 컨트롤러
@@ -19,11 +18,8 @@ export const createBucketController = async (
 ): Promise<void> => {
   try {
     const userID = req.userId!;
-    const { title, category, startDate, endDate } = req.body as {
+    const { title } = req.body as {
       title: string | undefined;
-      category?: string[] | undefined;
-      startDate?: string | undefined;
-      endDate?: string | undefined;
     };
 
     // title 필수 체크
@@ -38,45 +34,9 @@ export const createBucketController = async (
       return;
     }
 
-    // category 유효성 체크
-    if (category !== undefined) {
-      const invalidCategories = category.filter(
-        (c) => !BUCKET_CATEGORIES.includes(c as typeof BUCKET_CATEGORIES[number])
-      );
-      if (invalidCategories.length > 0) {
-        res.status(400).json({
-          message: `유효하지 않은 카테고리입니다. 가능한 카테고리: ${BUCKET_CATEGORIES.join(', ')}`,
-        });
-        return;
-      }
-    }
-
-    // startDate 유효성 체크
-    if (startDate !== undefined && isNaN(new Date(startDate).getTime())) {
-      res.status(400).json({ message: '시작 날짜 형식이 올바르지 않습니다.' });
-      return;
-    }
-
-    // endDate 유효성 체크
-    if (endDate !== undefined && isNaN(new Date(endDate).getTime())) {
-      res.status(400).json({ message: '종료 날짜 형식이 올바르지 않습니다.' });
-      return;
-    }
-
-    // startDate > endDate 체크
-    if (startDate !== undefined && endDate !== undefined) {
-      if (new Date(startDate) > new Date(endDate)) {
-        res.status(400).json({ message: '시작 날짜는 종료 날짜보다 이전이어야 합니다.' });
-        return;
-      }
-    }
-
     const data = await createBucket({
       userID,
       title: title.trim(),
-      category: category ?? [],
-      startDate: startDate !== undefined ? new Date(startDate) : undefined,
-      endDate: endDate !== undefined ? new Date(endDate) : undefined,
     });
 
     res.status(201).json({ message: '버킷리스트가 생성되었습니다.', data });
