@@ -1,9 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-
-interface CustomError extends Error {
-  statusCode?: number;
-  code?: string;
-}
+import type { CustomError } from '../types/error.types.js';
 
 export const errorMiddleware = (
   err: CustomError,
