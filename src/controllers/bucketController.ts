@@ -1,14 +1,14 @@
 import type { NextFunction, Request, Response } from 'express';
 import {
-    challengeBucket,
-    createBucket,
-    getBucketDetail,
-    getBucketsByUser,
-    getChallengingBucketCount,
-    unChallengeBucket,
+  challengeBucket,
+  createBucket,
+  getBucketDetail,
+  getBucketsByUser,
+  getChallengingBucketCount,
+  unChallengeBucket,
 } from '../services/bucketService.js';
 
-import { BUCKET_CATEGORIES } from '../constants/bucketConstants.js';
+
 import { isObjectId } from '../utils/validators.js';
 
 

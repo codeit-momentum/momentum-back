@@ -1,9 +1,28 @@
 import type { NextFunction, Request, Response } from 'express';
-import { getAiRecommendation } from '../services/momentService.js';
+import { getAiCategory, getAiRecommendation } from '../services/momentService.js';
+
+// ──────────────────────────────────────────────
+// POST /api/v1/moments/ai/:bucketID/category
+// ──────────────────────────────────────────────
+export const getAiCategoryController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userID = req.userId!;
+    const { bucketID } = req.params as { bucketID: string };
+
+    const data = await getAiCategory(bucketID, userID);
+
+    res.status(200).json({ message: 'AI 카테고리 추천 성공', data });
+  } catch (err) {
+    next(err);
+  }
+};
 
 // ──────────────────────────────────────────────
 // POST /api/v1/moments/ai/:bucketID/recommendation
-// GPT 추천 생성
 // ──────────────────────────────────────────────
 export const getAiRecommendationController = async (
   req: Request,
@@ -13,29 +32,8 @@ export const getAiRecommendationController = async (
   try {
     const userID = req.userId!;
     const { bucketID } = req.params as { bucketID: string };
-    const { title, durationDays } = req.body as {
-      title: string | undefined;
-      durationDays: number | undefined;
-    };
+    const { durationDays } = req.body as { durationDays: number | undefined };
 
-    // bucketID 형식 체크
-    if (!bucketID || !/^[a-f\d]{24}$/i.test(bucketID)) {
-      res.status(400).json({ message: '유효하지 않은 버킷 ID 형식입니다.' });
-      return;
-    }
-
-    // title 체크
-    if (!title || title.trim() === '') {
-      res.status(400).json({ message: '버킷리스트 제목은 필수입니다.' });
-      return;
-    }
-
-    if (title.trim().length > 50) {
-      res.status(400).json({ message: '버킷리스트 제목은 50자 이내여야 합니다.' });
-      return;
-    }
-
-    // durationDays 체크
     if (durationDays === undefined || durationDays === null) {
       res.status(400).json({ message: '예상 소요 일수는 필수입니다.' });
       return;
@@ -56,14 +54,9 @@ export const getAiRecommendationController = async (
       return;
     }
 
-    const data = await getAiRecommendation(
-      bucketID,
-      title.trim(),
-      userID,
-      durationDays,
-    );
+    const data = await getAiRecommendation(bucketID, userID, durationDays);
 
-    res.status(200).json({ message: 'AI 추천 생성 성공', data });
+    res.status(200).json({ message: 'AI 모멘트 추천 성공', data });
   } catch (err) {
     next(err);
   }
