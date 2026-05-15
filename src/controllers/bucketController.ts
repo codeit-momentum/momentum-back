@@ -1,23 +1,17 @@
 import type { NextFunction, Request, Response } from 'express';
 import {
-    challengeBucket,
-    createBucket,
-    getBucketDetail,
-    getBucketsByUser,
-    getChallengingBucketCount,
-    unChallengeBucket,
+  challengeBucket,
+  createBucket,
+  getBucketDetail,
+  getBucketsByUser,
+  getChallengingBucketCount,
+  unChallengeBucket,
 } from '../services/bucketService.js';
 
-import { BUCKET_CATEGORIES } from '../constants/bucketConstants.js';
 import { isObjectId } from '../utils/validators.js';
 
-
 // 버킷 생성 컨트롤러
-export const createBucketController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
+export const createBucketController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userID = req.userId!;
     const { title } = req.body as {
@@ -47,13 +41,8 @@ export const createBucketController = async (
   }
 };
 
-
 // 버킷 상세 조회 컨트롤러
-export const getBucketDetailController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
+export const getBucketDetailController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { bucketID } = req.params as { bucketID: string };
 
@@ -76,14 +65,8 @@ export const getBucketDetailController = async (
   }
 };
 
-
-
 // 버킷 전체 조회 컨트롤러
-export const getBucketsByUserController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
+export const getBucketsByUserController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { userID } = req.params as { userID: string };
     const { status } = req.query as { status?: string };
@@ -117,7 +100,6 @@ export const getBucketsByUserController = async (
   }
 };
 
-
 // 진행 중인 버킷 count 컨트롤러
 export const getChallengingBucketCountController = async (
   req: Request,
@@ -133,14 +115,8 @@ export const getChallengingBucketCountController = async (
   }
 };
 
-
-
 // 버킷 활성화 컨트롤러
-export const challengeBucketController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
+export const challengeBucketController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { bucketID } = req.params as { bucketID: string };
     const requestUserID = req.userId!;
@@ -151,14 +127,8 @@ export const challengeBucketController = async (
   }
 };
 
-
-
 // 버킷 비활성화 컨트롤러
-export const unChallengeBucketController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
+export const unChallengeBucketController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { bucketID } = req.params as { bucketID: string };
     const requestUserID = req.userId!;
