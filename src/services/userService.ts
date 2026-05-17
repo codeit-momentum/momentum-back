@@ -1,7 +1,10 @@
 import { prisma } from '../lib/prisma.js';
 import {
+  type GetUserProfileParams,
   USER_PROFILE_SELECT,
+  USER_PUBLIC_PROFILE_SELECT,
   type GetMyProfileParams,
+  type SearchUserByCodeParams,
   type UpdateMyProfileParams,
 } from '../types/user.types.js';
 import { createError } from '../utils/createError.js';
@@ -41,4 +44,72 @@ export const updateMyProfile = async (params: UpdateMyProfileParams) => {
     data,
     select: USER_PROFILE_SELECT,
   });
+};
+
+// 유저코드로 사용자 검색
+export const searchUserByCode = async (params: SearchUserByCodeParams) => {
+  const { userCode, requestUserID } = params;
+
+  const user = await prisma.user.findUnique({
+    where: { userCode },
+    select: USER_PUBLIC_PROFILE_SELECT,
+  });
+
+  if (!user) throw createError('사용자를 찾을 수 없습니다.', 404);
+
+  const [followerCount, followingCount, following] = await Promise.all([
+    prisma.follow.count({ where: { followingID: user.id } }),
+    prisma.follow.count({ where: { followerID: user.id } }),
+    prisma.follow.findUnique({
+      where: {
+        followerID_followingID: {
+          followerID: requestUserID,
+          followingID: user.id,
+        },
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  return {
+    ...user,
+    followerCount,
+    followingCount,
+    isFollowing: Boolean(following),
+    isMe: user.id === requestUserID,
+  };
+};
+
+// 특정 유저 프로필 조회
+export const getUserProfile = async (params: GetUserProfileParams) => {
+  const { userID, requestUserID } = params;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userID },
+    select: USER_PUBLIC_PROFILE_SELECT,
+  });
+
+  if (!user) throw createError('사용자를 찾을 수 없습니다.', 404);
+
+  const [followerCount, followingCount, following] = await Promise.all([
+    prisma.follow.count({ where: { followingID: userID } }),
+    prisma.follow.count({ where: { followerID: userID } }),
+    prisma.follow.findUnique({
+      where: {
+        followerID_followingID: {
+          followerID: requestUserID,
+          followingID: userID,
+        },
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  return {
+    ...user,
+    followerCount,
+    followingCount,
+    isFollowing: Boolean(following),
+    isMe: user.id === requestUserID,
+  };
 };

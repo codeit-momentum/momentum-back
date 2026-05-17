@@ -11,6 +11,18 @@ export interface UpdateMyProfileParams {
   isKnocked?: boolean | undefined;
 }
 
+// 유저코드 검색 파라미터
+export interface SearchUserByCodeParams {
+  userCode: string;
+  requestUserID: string;
+}
+
+// 특정 유저 프로필 조회 파라미터
+export interface GetUserProfileParams {
+  userID: string;
+  requestUserID: string;
+}
+
 // 프로필 응답 shape (Prisma select). API 응답 형태를 한 곳에서 관리.
 // `as const` 덕분에 prisma 반환 타입이 정확히 추론됨.
 export const USER_PROFILE_SELECT = {
@@ -21,6 +33,17 @@ export const USER_PROFILE_SELECT = {
   userCode: true,
   isKnocked: true,
   isAgreed: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
+// 다른 사용자에게 노출되는 공개 프로필 응답 shape
+export const USER_PUBLIC_PROFILE_SELECT = {
+  id: true,
+  nickname: true,
+  profile: true,
+  userCode: true,
+  isKnocked: true,
   createdAt: true,
   updatedAt: true,
 } as const;

@@ -1,13 +1,8 @@
 import type { CustomError } from '../types/error.types.js';
 import { prisma } from '../lib/prisma.js';
+import type { GetTermsQuery } from '../types/term.types.js';
 import { createError } from '../utils/createError.js';
 import { assertObjectId } from '../utils/validators.js';
-
-export type TermType = 'REQUIRED' | 'OPTIONAL';
-
-export type GetTermsQuery = {
-  type?: TermType;
-};
 
 export async function getTerms(query: GetTermsQuery) {
   const { type } = query;
@@ -127,4 +122,3 @@ export async function hasAgreedAllRequiredTerms(userId: string): Promise<boolean
 
   return agreedCount === requiredTerms.length;
 }
-

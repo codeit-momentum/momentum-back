@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { DEFAULT_PROFILE_IMAGE, NICKNAME_MAX_LENGTH } from '../constants/userConstants.js';
-import { getMyProfile, updateMyProfile } from '../services/userService.js';
+import { getMyProfile, getUserProfile, searchUserByCode, updateMyProfile } from '../services/userService.js';
 
 // 내 프로필 조회 컨트롤러
 export const getMyProfileController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -72,6 +72,40 @@ export const updateMyProfileController = async (req: Request, res: Response, nex
     });
 
     res.status(200).json({ message: '내 프로필 수정 성공', data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 유저코드로 사용자 검색 컨트롤러
+export const searchUserByCodeController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const requestUserID = req.userId!;
+    const { userCode } = req.query as { userCode: string };
+
+    const data = await searchUserByCode({
+      userCode: userCode.trim(),
+      requestUserID,
+    });
+
+    res.status(200).json({ message: '사용자 검색 성공', data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 특정 유저 프로필 조회 컨트롤러
+export const getUserProfileController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const requestUserID = req.userId!;
+    const { userID } = req.params as { userID: string };
+
+    const data = await getUserProfile({
+      userID,
+      requestUserID,
+    });
+
+    res.status(200).json({ message: '사용자 프로필 조회 성공', data });
   } catch (err) {
     next(err);
   }

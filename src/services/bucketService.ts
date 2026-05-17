@@ -7,12 +7,6 @@ import type {
 } from '../types/bucket.types.js';
 import { createError } from '../utils/createError.js';
 
-// 버킷리스트 생성
-interface CreateBucketParams {
-  userID: string;
-  title: string;
-}
-
 export const createBucket = async (params: CreateBucketParams) => {
   const { userID, title } = params;
 
