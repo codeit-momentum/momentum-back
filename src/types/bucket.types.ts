@@ -2,9 +2,6 @@
 export interface CreateBucketParams {
   userID: string;
   title: string;
-  category?: string[] | undefined;
-  startDate?: Date | undefined;
-  endDate?: Date | undefined;
 }
 
 // 버킷리스트 상세 조회 파라미터
