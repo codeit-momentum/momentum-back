@@ -1,11 +1,12 @@
 import type { NextFunction, Request, Response } from 'express';
 import {
   confirmMoments,
+  createMoment,
   getAiCategory, getAiRecommendation,
-  updateStartDate,
+  startNow,
+  updateStartDate
 } from '../services/momentService.js';
-
-// ──────────────────────────────────────────────
+import { resolveCategory } from '../utils/categoryResolver.js';
 // POST /api/v1/moments/ai/:bucketID/category
 // ──────────────────────────────────────────────
 export const getAiCategoryController = async (
@@ -81,8 +82,9 @@ export const confirmMomentsController = async (
   try {
     const userID = req.userId!;
     const { bucketID } = req.params as { bucketID: string };
-    const { category, frequency, startDate, moments } = req.body as {
+    const { category, customCategory, frequency, startDate, moments } = req.body as {
       category: string | undefined;
+      customCategory?: string | undefined;
       frequency: string | undefined;
       startDate: string | undefined;
       moments: Array<{ momentTitle: string }> | undefined;
@@ -93,6 +95,8 @@ export const confirmMomentsController = async (
       res.status(400).json({ message: '카테고리는 필수입니다.' });
       return;
     }
+
+    const resolvedCategory = resolveCategory(category, customCategory);
 
     if (!BUCKET_CATEGORIES.includes(category as typeof BUCKET_CATEGORIES[number])) {
       res.status(400).json({ message: `유효하지 않은 카테고리입니다. 가능한 카테고리: ${BUCKET_CATEGORIES.join(', ')}` });
@@ -136,7 +140,7 @@ export const confirmMomentsController = async (
     const data = await confirmMoments({
       bucketID,
       userID,
-      category,
+      category: resolvedCategory,
       frequency,
       startDate,
       moments,
@@ -177,6 +181,117 @@ export const updateStartDateController = async (
     const data = await updateStartDate(bucketID, userID, startDate);
 
     res.status(200).json({ message: '시작 날짜가 변경되었습니다.', data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// ──────────────────────────────────────────────
+// POST /api/v1/moments/:bucketID
+// 수동 모멘트 생성
+// ──────────────────────────────────────────────
+export const createMomentController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userID = req.userId!;
+    const { bucketID } = req.params as { bucketID: string };
+    const { category, customCategory, frequency, startDate, moments } = req.body as {
+      category: string | undefined;
+      customCategory?: string | undefined;
+      frequency: string | undefined;
+      startDate: string | undefined;
+      moments: Array<{ momentTitle: string }> | undefined;
+    };
+
+    // category 체크
+// category 체크
+    if (!category || category.trim() === '') {
+      res.status(400).json({ message: '카테고리는 필수입니다.' });
+      return;
+    }
+
+    const resolvedCategory = resolveCategory(category, customCategory);
+
+    if (!BUCKET_CATEGORIES.includes(category as typeof BUCKET_CATEGORIES[number])) {
+      res.status(400).json({ message: `유효하지 않은 카테고리입니다. 가능한 카테고리: ${BUCKET_CATEGORIES.join(', ')}` });
+      return;
+    }
+
+    // frequency 체크
+    if (!frequency || frequency.trim() === '') {
+      res.status(400).json({ message: '빈도는 필수입니다.' });
+      return;
+    }
+
+    if (!BUCKET_FREQUENCIES.includes(frequency as typeof BUCKET_FREQUENCIES[number])) {
+      res.status(400).json({ message: `유효하지 않은 빈도입니다. 가능한 빈도: ${BUCKET_FREQUENCIES.join(', ')}` });
+      return;
+    }
+
+    // startDate 체크
+    if (!startDate || startDate.trim() === '') {
+      res.status(400).json({ message: '시작 날짜는 필수입니다.' });
+      return;
+    }
+
+    if (isNaN(new Date(startDate).getTime())) {
+      res.status(400).json({ message: '시작 날짜 형식이 올바르지 않습니다.' });
+      return;
+    }
+
+    // moments 체크
+    if (!moments || !Array.isArray(moments) || moments.length === 0) {
+      res.status(400).json({ message: '모멘트 목록은 필수이며 최소 1개 이상이어야 합니다.' });
+      return;
+    }
+
+    for (const moment of moments) {
+      if (!moment.momentTitle || moment.momentTitle.trim() === '') {
+        res.status(400).json({ message: '모멘트 제목은 필수입니다.' });
+        return;
+      }
+      if (moment.momentTitle.trim().length > 50) {
+        res.status(400).json({ message: '모멘트 제목은 50자 이내여야 합니다.' });
+        return;
+      }
+    }
+
+    const data = await createMoment({
+      bucketID,
+      userID,
+      category: resolvedCategory,
+      frequency,
+      startDate,
+      moments,
+    });
+
+    res.status(201).json({ message: '모멘트가 생성되었습니다.', data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// ──────────────────────────────────────────────
+// PATCH /api/v1/moments/:bucketID/start/now
+// 지금 바로 시작하기
+// ──────────────────────────────────────────────
+export const startNowController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userID = req.userId!;
+    const { bucketID } = req.params as { bucketID: string };
+
+    const data = await startNow(bucketID, userID);
+
+    res.status(200).json({ message: '버킷리스트가 시작되었습니다.', data });
   } catch (err) {
     next(err);
   }
