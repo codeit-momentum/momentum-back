@@ -9,3 +9,16 @@ export interface GptRecommendationResponse {
   fallback: boolean;
   errorMsg: string;
 }
+
+export interface ConfirmMomentItem {
+  momentTitle: string;
+}
+
+export interface ConfirmMomentsParams {
+  bucketID: string;
+  userID: string;
+  category: string;
+  frequency: string;
+  startDate: string;
+  moments: ConfirmMomentItem[];
+}

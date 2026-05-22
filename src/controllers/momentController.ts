@@ -61,3 +61,88 @@ export const getAiRecommendationController = async (
     next(err);
   }
 };
+
+
+import { BUCKET_CATEGORIES, BUCKET_FREQUENCIES } from '../constants/bucketConstants.js';
+import {
+  confirmMoments
+} from '../services/momentService.js';
+
+// ──────────────────────────────────────────────
+// POST /api/v1/moments/ai/:bucketID
+// 모멘트 확정 저장
+// ──────────────────────────────────────────────
+export const confirmMomentsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userID = req.userId!;
+    const { bucketID } = req.params as { bucketID: string };
+    const { category, frequency, startDate, moments } = req.body as {
+      category: string | undefined;
+      frequency: string | undefined;
+      startDate: string | undefined;
+      moments: Array<{ momentTitle: string }> | undefined;
+    };
+
+    // category 체크
+    if (!category || category.trim() === '') {
+      res.status(400).json({ message: '카테고리는 필수입니다.' });
+      return;
+    }
+
+    if (!BUCKET_CATEGORIES.includes(category as typeof BUCKET_CATEGORIES[number])) {
+      res.status(400).json({ message: `유효하지 않은 카테고리입니다. 가능한 카테고리: ${BUCKET_CATEGORIES.join(', ')}` });
+      return;
+    }
+
+    // frequency 체크
+    if (!frequency || frequency.trim() === '') {
+      res.status(400).json({ message: '빈도는 필수입니다.' });
+      return;
+    }
+
+    if (!BUCKET_FREQUENCIES.includes(frequency as typeof BUCKET_FREQUENCIES[number])) {
+      res.status(400).json({ message: `유효하지 않은 빈도입니다. 가능한 빈도: ${BUCKET_FREQUENCIES.join(', ')}` });
+      return;
+    }
+
+    // startDate 체크
+    if (!startDate || isNaN(new Date(startDate).getTime())) {
+      res.status(400).json({ message: '시작 날짜 형식이 올바르지 않습니다.' });
+      return;
+    }
+
+    // moments 체크
+    if (!moments || !Array.isArray(moments) || moments.length === 0) {
+      res.status(400).json({ message: '모멘트 목록은 필수이며 최소 1개 이상이어야 합니다.' });
+      return;
+    }
+
+    for (const moment of moments) {
+      if (!moment.momentTitle || moment.momentTitle.trim() === '') {
+        res.status(400).json({ message: '모멘트 제목은 필수입니다.' });
+        return;
+      }
+      if (moment.momentTitle.trim().length > 50) {
+        res.status(400).json({ message: '모멘트 제목은 50자 이내여야 합니다.' });
+        return;
+      }
+    }
+
+    const data = await confirmMoments({
+      bucketID,
+      userID,
+      category,
+      frequency,
+      startDate,
+      moments,
+    });
+
+    res.status(201).json({ message: '모멘트 확정 저장 성공', data });
+  } catch (err) {
+    next(err);
+  }
+};
