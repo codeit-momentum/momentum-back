@@ -1,5 +1,9 @@
 import type { NextFunction, Request, Response } from 'express';
-import { getAiCategory, getAiRecommendation } from '../services/momentService.js';
+import {
+  confirmMoments,
+  getAiCategory, getAiRecommendation,
+  updateStartDate,
+} from '../services/momentService.js';
 
 // ──────────────────────────────────────────────
 // POST /api/v1/moments/ai/:bucketID/category
@@ -64,9 +68,6 @@ export const getAiRecommendationController = async (
 
 
 import { BUCKET_CATEGORIES, BUCKET_FREQUENCIES } from '../constants/bucketConstants.js';
-import {
-  confirmMoments
-} from '../services/momentService.js';
 
 // ──────────────────────────────────────────────
 // POST /api/v1/moments/ai/:bucketID
@@ -142,6 +143,40 @@ export const confirmMomentsController = async (
     });
 
     res.status(201).json({ message: '모멘트 확정 저장 성공', data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// ──────────────────────────────────────────────
+// PATCH /api/v1/moments/ai/:bucketID/startDate
+// 시작 날짜 변경
+// ──────────────────────────────────────────────
+export const updateStartDateController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userID = req.userId!;
+    const { bucketID } = req.params as { bucketID: string };
+    const { startDate } = req.body as { startDate: string | undefined };
+
+    // startDate 체크
+    if (!startDate || startDate.trim() === '') {
+      res.status(400).json({ message: '시작 날짜는 필수입니다.' });
+      return;
+    }
+
+    if (isNaN(new Date(startDate).getTime())) {
+      res.status(400).json({ message: '시작 날짜 형식이 올바르지 않습니다.' });
+      return;
+    }
+
+    const data = await updateStartDate(bucketID, userID, startDate);
+
+    res.status(200).json({ message: '시작 날짜가 변경되었습니다.', data });
   } catch (err) {
     next(err);
   }

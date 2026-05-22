@@ -197,3 +197,93 @@ export const confirmMoments = async (params: ConfirmMomentsParams) => {
 
   return { bucket: updatedBucket, moments: createdMoments };
 };
+
+
+// ──────────────────────────────────────────────
+// 시작 날짜 변경
+// PATCH /api/v1/moments/ai/:bucketID/startDate
+// ──────────────────────────────────────────────
+export const updateStartDate = async (
+  bucketID: string,
+  userID: string,
+  newStartDate: string,
+) => {
+  // 버킷 존재 + 소유자 + frequency + 모멘트 한번에 조회
+  const bucket = await prisma.bucket.findUnique({
+    where: { id: bucketID },
+    select: {
+      id: true,
+      userID: true,
+      isCompleted: true,
+      frequency: true,
+      moments: {
+        orderBy: { startDate: 'asc' },
+        select: { id: true },
+      },
+    },
+  });
+
+  if (!bucket) throw createError('버킷리스트를 찾을 수 없습니다.', 404);
+  if (bucket.userID !== userID) throw createError('본인의 버킷리스트만 수정할 수 있습니다.', 403);
+  if (bucket.isCompleted) throw createError('이미 달성된 버킷리스트는 수정할 수 없습니다.', 400);
+  if (bucket.moments.length === 0) throw createError('모멘트가 없어 시작 날짜를 변경할 수 없습니다.', 400);
+
+  const frequencyDays = FREQUENCY_DAYS[bucket.frequency];
+  if (!frequencyDays) throw createError('유효하지 않은 빈도입니다.', 400);
+
+  const bucketStart = new Date(newStartDate);
+
+  // 각 모멘트 날짜 재계산
+  const momentUpdates = bucket.moments.map((moment, index) => {
+    const mStart = new Date(bucketStart);
+    mStart.setDate(mStart.getDate() + index * frequencyDays);
+
+    const mEnd = new Date(mStart);
+    mEnd.setDate(mEnd.getDate() + frequencyDays);
+
+    return prisma.moment.update({
+      where: { id: moment.id },
+      data: { startDate: mStart, endDate: mEnd },
+      select: {
+        id: true,
+        momentTitle: true,
+        startDate: true,
+        endDate: true,
+        isCompleted: true,
+      },
+    });
+  });
+
+  // 버킷 endDate = 마지막 모멘트 endDate
+  const lastIndex = bucket.moments.length - 1;
+  const bucketEnd = new Date(bucketStart);
+  bucketEnd.setDate(bucketEnd.getDate() + (lastIndex + 1) * frequencyDays);
+
+  // 트랜잭션: 버킷 startDate/endDate + 모멘트 날짜 전체 업데이트
+  const [updatedBucket, ...updatedMoments] = await prisma.$transaction([
+    prisma.bucket.update({
+      where: { id: bucketID },
+      data: {
+        startDate: bucketStart,
+        endDate: bucketEnd,
+      },
+      select: {
+        id: true,
+        userID: true,
+        title: true,
+        category: true,
+        frequency: true,
+        startDate: true,
+        endDate: true,
+        totalMoment: true,
+        completedCount: true,
+        isCompleted: true,
+        isChallenging: true,
+        updatedAt: true,
+      },
+    }),
+    ...momentUpdates,
+  ]);
+
+  return { bucket: updatedBucket, moments: updatedMoments };
+};
