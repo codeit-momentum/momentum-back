@@ -1,6 +1,10 @@
 import type { NextFunction, Request, Response } from 'express';
 import type { CustomError } from '../types/error.types.js';
 
+export const notFoundMiddleware = (_req: Request, res: Response): void => {
+  res.status(404).json({ message: '요청한 경로를 찾을 수 없습니다.' });
+};
+
 export const errorMiddleware = (
   err: CustomError,
   _req: Request,

@@ -28,6 +28,8 @@ model User {
   buckets   Bucket[]
   moments   Moment[]
   userTerms UserTerm[]
+  following Follow[] @relation("UserFollowing")
+  followers Follow[] @relation("UserFollowers")
 
   @@map("user") // MongoDB 컬렉션 이름을 "user"로 지정
 }
@@ -59,6 +61,21 @@ model UserTerm {
 
   @@unique([userID, termID])
   @@map("userTerm")
+}
+
+model Follow {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  followerID  String
+  followingID String
+  isFavorite  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  follower  User @relation("UserFollowing", fields: [followerID], references: [id])
+  following User @relation("UserFollowers", fields: [followingID], references: [id])
+
+  @@unique([followerID, followingID])
+  @@map("follow")
 }
 
 model Bucket {
