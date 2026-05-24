@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { BUCKET_CATEGORIES } from '../constants/bucketConstants.js';
 import {
   challengeBucket,
   createBucket,
@@ -14,8 +15,9 @@ import { isObjectId } from '../utils/validators.js';
 export const createBucketController = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userID = req.userId!;
-    const { title } = req.body as {
+    const { title, category } = req.body as {
       title: string | undefined;
+      category: string | undefined;
     };
 
     // title 필수 체크
@@ -30,9 +32,21 @@ export const createBucketController = async (req: Request, res: Response, next: 
       return;
     }
 
+    if (!category || category.trim() === '') {
+      res.status(400).json({ message: '카테고리는 필수입니다.' });
+      return;
+    }
+
+    if (!BUCKET_CATEGORIES.includes(category as typeof BUCKET_CATEGORIES[number])) {
+      res.status(400).json({ message: `유효하지 않은 카테고리입니다. 가능한 카테고리: ${BUCKET_CATEGORIES.join(', ')}` });
+      return;
+    }
+
+
     const data = await createBucket({
       userID,
       title: title.trim(),
+      category: category!,
     });
 
     res.status(201).json({ message: '버킷리스트가 생성되었습니다.', data });
