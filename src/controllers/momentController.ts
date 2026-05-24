@@ -2,29 +2,12 @@ import type { NextFunction, Request, Response } from 'express';
 import {
   confirmMoments,
   createMoment,
-  getAiCategory, getAiRecommendation,
+  getAiRecommendation,
   startNow,
   updateStartDate
 } from '../services/momentService.js';
 import { resolveCategory } from '../utils/categoryResolver.js';
-// POST /api/v1/moments/ai/:bucketID/category
-// ──────────────────────────────────────────────
-export const getAiCategoryController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> => {
-  try {
-    const userID = req.userId!;
-    const { bucketID } = req.params as { bucketID: string };
 
-    const data = await getAiCategory(bucketID, userID);
-
-    res.status(200).json({ message: 'AI 카테고리 추천 성공', data });
-  } catch (err) {
-    next(err);
-  }
-};
 
 // ──────────────────────────────────────────────
 // POST /api/v1/moments/ai/:bucketID/recommendation

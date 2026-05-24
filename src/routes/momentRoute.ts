@@ -2,7 +2,6 @@ import express from 'express';
 import {
   confirmMomentsController,
   createMomentController,
-  getAiCategoryController,
   getAiRecommendationController,
   startNowController,
   updateStartDateController,
@@ -14,8 +13,6 @@ const router = express.Router();
 
 router.use(authenticate);
 
-// POST   /api/v1/moments/ai/:bucketID/category        카테고리 추천
-router.post('/ai/:bucketID/category', validateBucketIDForMoment, getAiCategoryController);
 
 // POST   /api/v1/moments/ai/:bucketID/recommendation  모멘트 추천
 router.post('/ai/:bucketID/recommendation', validateBucketIDForMoment, getAiRecommendationController);
