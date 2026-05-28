@@ -1,9 +1,7 @@
 import OpenAI from 'openai';
 import { FREQUENCY_DAYS } from '../constants/bucketConstants.js';
 import {
-  GPT_MODEL,
-  buildRecommendationFallback,
-  buildRecommendationPrompt
+  buildRecommendationFallback
 } from '../constants/momentConstants.js';
 import { prisma } from '../lib/prisma.js';
 import type {
@@ -23,7 +21,8 @@ const createError = (message: string, statusCode: number): Error => {
 };
 
 
-// 모멘트 추천
+// ──────────────────────────────────────────────
+// API 2: 모멘트 추천
 // POST /api/v1/moments/ai/:bucketID/recommendation
 // ──────────────────────────────────────────────
 export const getAiRecommendation = async (
@@ -34,27 +33,65 @@ export const getAiRecommendation = async (
 
   const bucket = await prisma.bucket.findUnique({
     where: { id: bucketID },
-    select: { id: true, userID: true, title: true },
+    select: { id: true, userID: true, title: true, category: true },
   });
 
   if (!bucket) throw createError('버킷리스트를 찾을 수 없습니다.', 404);
   if (bucket.userID !== userID) throw createError('본인의 버킷리스트만 조회할 수 있습니다.', 403);
 
+  // bucket category 첫번째 값 사용
+  const category = bucket.category[0] ?? '기타';
+
   try {
-    const completion = await openai.chat.completions.create({
-      model: GPT_MODEL,
-      messages: [{ role: 'user', content: buildRecommendationPrompt(bucket.title, durationDays) }],
-      temperature: 0.7,
-      max_tokens: 1000,
+    const response = await openai.responses.create({
+      prompt: {
+        id: 'pmpt_69de281cc8dc819494ef5a9cb55151f60943004c8c748ab3',
+        version: '3',
+        variables: {
+          title: bucket.title,
+          userid: userID,
+          durationdays: String(durationDays),
+          category,
+        },
+      },
     });
 
-    const content = completion.choices[0]?.message?.content;
+// output JSON 파싱
+  const content = response.output
+    .filter((item) => item.type === 'message')
+    .flatMap((item) => {
+      if (item.type !== 'message') return [];
+      return item.content
+        .filter((c) => c.type === 'output_text')
+        .map((c) => {
+          if (c.type !== 'output_text') return '';
+          return c.text;
+        });
+    })
+    .join('');
+
     if (!content) throw new Error('GPT 응답이 비어있습니다.');
 
-    const parsed = JSON.parse(content) as GptRecommendationResponse;
-    if (!Array.isArray(parsed.momentTitleArray)) throw new Error('GPT 응답 형식이 올바르지 않습니다.');
+    const parsed = JSON.parse(content) as {
+      title: string;
+      category: string;
+      userID: string;
+      durationDays: number;
+      totalMoment: number;
+      momentTitleArray: string[];
+      fallback: boolean;
+      errorMsg: string;
+    };
 
-    return parsed;
+    if (!Array.isArray(parsed.momentTitleArray)) {
+      throw new Error('GPT 응답 형식이 올바르지 않습니다.');
+    }
+
+    return {
+      momentTitleArray: parsed.momentTitleArray,
+      fallback: parsed.fallback,
+      errorMsg: parsed.errorMsg,
+    };
 
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'GPT 호출에 실패했습니다.';
@@ -62,18 +99,16 @@ export const getAiRecommendation = async (
   }
 };
 
-
-
 // ──────────────────────────────────────────────
 // API 3: 모멘트 확정 저장
 // POST /api/v1/moments/ai/:bucketID
 // ──────────────────────────────────────────────
 export const confirmMoments = async (params: ConfirmMomentsParams) => {
-  const { bucketID, userID, category, frequency, startDate, moments } = params;
+  const { bucketID, userID, frequency, startDate, moments } = params;
 
   const bucket = await prisma.bucket.findUnique({
     where: { id: bucketID },
-    select: { id: true, userID: true, isCompleted: true },
+    select: { id: true, userID: true, isCompleted: true, category: true }, // category 조회
   });
 
   if (!bucket) throw createError('버킷리스트를 찾을 수 없습니다.', 404);
@@ -108,7 +143,7 @@ export const confirmMoments = async (params: ConfirmMomentsParams) => {
     prisma.bucket.update({
       where: { id: bucketID },
       data: {
-        category: [category],
+        category: bucket.category,
         frequency,
         startDate: bucketStart,
         endDate: bucketEnd,
@@ -251,11 +286,11 @@ export const updateStartDate = async (
 // POST /api/v1/moments/:bucketID
 // ──────────────────────────────────────────────
 export const createMoment = async (params: ConfirmMomentsParams) => {
-  const { bucketID, userID, category, frequency, startDate, moments } = params;
+  const { bucketID, userID, frequency, startDate, moments } = params;
 
   const bucket = await prisma.bucket.findUnique({
     where: { id: bucketID },
-    select: { id: true, userID: true, isCompleted: true },
+    select: { id: true, userID: true, isCompleted: true , category: true },
   });
 
   if (!bucket) throw createError('버킷리스트를 찾을 수 없습니다.', 404);
@@ -287,7 +322,7 @@ export const createMoment = async (params: ConfirmMomentsParams) => {
     prisma.bucket.update({
       where: { id: bucketID },
       data: {
-        category: [category],
+        category: bucket.category,
         frequency,
         startDate: bucketStart,
         endDate: bucketEnd,

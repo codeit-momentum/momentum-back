@@ -10,6 +10,17 @@ export interface GptRecommendationResponse {
   errorMsg: string;
 }
 
+export interface GptRecommendationRawResponse {
+  title: string;
+  category: string;
+  userID: string;
+  durationDays: number;
+  totalMoment: number;
+  momentTitleArray: string[];
+  fallback: boolean;
+  errorMsg: string;
+}
+
 export interface ConfirmMomentItem {
   momentTitle: string;
 }
@@ -17,7 +28,6 @@ export interface ConfirmMomentItem {
 export interface ConfirmMomentsParams {
   bucketID: string;
   userID: string;
-  category: string;
   frequency: string;
   startDate: string;
   moments: ConfirmMomentItem[];

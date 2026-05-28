@@ -6,7 +6,6 @@ import {
   startNow,
   updateStartDate
 } from '../services/momentService.js';
-import { resolveCategory } from '../utils/categoryResolver.js';
 
 
 // ──────────────────────────────────────────────
@@ -51,7 +50,7 @@ export const getAiRecommendationController = async (
 };
 
 
-import { BUCKET_CATEGORIES, BUCKET_FREQUENCIES } from '../constants/bucketConstants.js';
+import { BUCKET_FREQUENCIES } from '../constants/bucketConstants.js';
 
 // ──────────────────────────────────────────────
 // POST /api/v1/moments/ai/:bucketID
@@ -65,26 +64,12 @@ export const confirmMomentsController = async (
   try {
     const userID = req.userId!;
     const { bucketID } = req.params as { bucketID: string };
-    const { category, customCategory, frequency, startDate, moments } = req.body as {
-      category: string | undefined;
-      customCategory?: string | undefined;
+    const { frequency, startDate, moments } = req.body as {
       frequency: string | undefined;
       startDate: string | undefined;
       moments: Array<{ momentTitle: string }> | undefined;
     };
 
-    // category 체크
-    if (!category || category.trim() === '') {
-      res.status(400).json({ message: '카테고리는 필수입니다.' });
-      return;
-    }
-
-    const resolvedCategory = resolveCategory(category, customCategory);
-
-    if (!BUCKET_CATEGORIES.includes(category as typeof BUCKET_CATEGORIES[number])) {
-      res.status(400).json({ message: `유효하지 않은 카테고리입니다. 가능한 카테고리: ${BUCKET_CATEGORIES.join(', ')}` });
-      return;
-    }
 
     // frequency 체크
     if (!frequency || frequency.trim() === '') {
@@ -123,7 +108,6 @@ export const confirmMomentsController = async (
     const data = await confirmMoments({
       bucketID,
       userID,
-      category: resolvedCategory,
       frequency,
       startDate,
       moments,
@@ -182,27 +166,12 @@ export const createMomentController = async (
   try {
     const userID = req.userId!;
     const { bucketID } = req.params as { bucketID: string };
-    const { category, customCategory, frequency, startDate, moments } = req.body as {
-      category: string | undefined;
-      customCategory?: string | undefined;
+    const { frequency, startDate, moments } = req.body as {
       frequency: string | undefined;
       startDate: string | undefined;
       moments: Array<{ momentTitle: string }> | undefined;
     };
 
-    // category 체크
-// category 체크
-    if (!category || category.trim() === '') {
-      res.status(400).json({ message: '카테고리는 필수입니다.' });
-      return;
-    }
-
-    const resolvedCategory = resolveCategory(category, customCategory);
-
-    if (!BUCKET_CATEGORIES.includes(category as typeof BUCKET_CATEGORIES[number])) {
-      res.status(400).json({ message: `유효하지 않은 카테고리입니다. 가능한 카테고리: ${BUCKET_CATEGORIES.join(', ')}` });
-      return;
-    }
 
     // frequency 체크
     if (!frequency || frequency.trim() === '') {
@@ -246,7 +215,6 @@ export const createMomentController = async (
     const data = await createMoment({
       bucketID,
       userID,
-      category: resolvedCategory,
       frequency,
       startDate,
       moments,
