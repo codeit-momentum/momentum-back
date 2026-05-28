@@ -8,7 +8,7 @@ import type {
 import { createError } from '../utils/createError.js';
 
 export const createBucket = async (params: CreateBucketParams) => {
-  const { userID, title } = params;
+  const { userID, title, category } = params;
 
   const user = await prisma.user.findUnique({
     where: { id: userID },
@@ -20,6 +20,7 @@ export const createBucket = async (params: CreateBucketParams) => {
     data: {
       userID,
       title,
+      category: [category],
     },
     select: {
       id: true,

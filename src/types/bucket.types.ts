@@ -2,6 +2,7 @@
 export interface CreateBucketParams {
   userID: string;
   title: string;
+  category: string;
 }
 
 // 버킷리스트 상세 조회 파라미터
