@@ -1,15 +1,59 @@
 import type { NextFunction, Request, Response } from 'express';
+import { BUCKET_FREQUENCIES } from '../constants/bucketConstants.js';
 import {
   confirmMoments,
   createMoment,
   getAiRecommendation,
   startNow,
-  updateStartDate
+  updateStartDate,
 } from '../services/momentService.js';
 
+// ──────────────────────────────────────────────
+// 공통 유효성 검사 헬퍼
+// ──────────────────────────────────────────────
+const validateMomentBody = (
+  frequency: string | undefined,
+  startDate: string | undefined,
+  moments: Array<{ momentTitle: string }> | undefined,
+  res: Response,
+): boolean => {
+  if (!frequency || frequency.trim() === '') {
+    res.status(400).json({ message: '빈도는 필수입니다.' });
+    return false;
+  }
+
+  if (!BUCKET_FREQUENCIES.includes(frequency as typeof BUCKET_FREQUENCIES[number])) {
+    res.status(400).json({ message: `유효하지 않은 빈도입니다. 가능한 빈도: ${BUCKET_FREQUENCIES.join(', ')}` });
+    return false;
+  }
+
+  if (!startDate || isNaN(new Date(startDate).getTime())) {
+    res.status(400).json({ message: '시작 날짜 형식이 올바르지 않습니다.' });
+    return false;
+  }
+
+  if (!moments || !Array.isArray(moments) || moments.length === 0) {
+    res.status(400).json({ message: '모멘트 목록은 필수이며 최소 1개 이상이어야 합니다.' });
+    return false;
+  }
+
+  for (const moment of moments) {
+    if (!moment.momentTitle || moment.momentTitle.trim() === '') {
+      res.status(400).json({ message: '모멘트 제목은 필수입니다.' });
+      return false;
+    }
+    if (moment.momentTitle.trim().length > 50) {
+      res.status(400).json({ message: '모멘트 제목은 50자 이내여야 합니다.' });
+      return false;
+    }
+  }
+
+  return true;
+};
 
 // ──────────────────────────────────────────────
 // POST /api/v1/moments/ai/:bucketID/recommendation
+// AI 모멘트 추천
 // ──────────────────────────────────────────────
 export const getAiRecommendationController = async (
   req: Request,
@@ -19,7 +63,9 @@ export const getAiRecommendationController = async (
   try {
     const userID = req.userId!;
     const { bucketID } = req.params as { bucketID: string };
-    const { durationDays } = req.body as { durationDays: number | undefined };
+    const { durationDays } = req.body as {
+      durationDays: number | undefined;
+    };
 
     if (durationDays === undefined || durationDays === null) {
       res.status(400).json({ message: '예상 소요 일수는 필수입니다.' });
@@ -41,6 +87,7 @@ export const getAiRecommendationController = async (
       return;
     }
 
+
     const data = await getAiRecommendation(bucketID, userID, durationDays);
 
     res.status(200).json({ message: 'AI 모멘트 추천 성공', data });
@@ -49,12 +96,9 @@ export const getAiRecommendationController = async (
   }
 };
 
-
-import { BUCKET_FREQUENCIES } from '../constants/bucketConstants.js';
-
 // ──────────────────────────────────────────────
 // POST /api/v1/moments/ai/:bucketID
-// 모멘트 확정 저장
+// AI 모멘트 확정 저장
 // ──────────────────────────────────────────────
 export const confirmMomentsController = async (
   req: Request,
@@ -70,47 +114,14 @@ export const confirmMomentsController = async (
       moments: Array<{ momentTitle: string }> | undefined;
     };
 
-
-    // frequency 체크
-    if (!frequency || frequency.trim() === '') {
-      res.status(400).json({ message: '빈도는 필수입니다.' });
-      return;
-    }
-
-    if (!BUCKET_FREQUENCIES.includes(frequency as typeof BUCKET_FREQUENCIES[number])) {
-      res.status(400).json({ message: `유효하지 않은 빈도입니다. 가능한 빈도: ${BUCKET_FREQUENCIES.join(', ')}` });
-      return;
-    }
-
-    // startDate 체크
-    if (!startDate || isNaN(new Date(startDate).getTime())) {
-      res.status(400).json({ message: '시작 날짜 형식이 올바르지 않습니다.' });
-      return;
-    }
-
-    // moments 체크
-    if (!moments || !Array.isArray(moments) || moments.length === 0) {
-      res.status(400).json({ message: '모멘트 목록은 필수이며 최소 1개 이상이어야 합니다.' });
-      return;
-    }
-
-    for (const moment of moments) {
-      if (!moment.momentTitle || moment.momentTitle.trim() === '') {
-        res.status(400).json({ message: '모멘트 제목은 필수입니다.' });
-        return;
-      }
-      if (moment.momentTitle.trim().length > 50) {
-        res.status(400).json({ message: '모멘트 제목은 50자 이내여야 합니다.' });
-        return;
-      }
-    }
+    if (!validateMomentBody(frequency, startDate, moments, res)) return;
 
     const data = await confirmMoments({
       bucketID,
       userID,
-      frequency,
-      startDate,
-      moments,
+      frequency: frequency!,
+      startDate: startDate!,
+      moments: moments!,
     });
 
     res.status(201).json({ message: '모멘트 확정 저장 성공', data });
@@ -118,7 +129,6 @@ export const confirmMomentsController = async (
     next(err);
   }
 };
-
 
 // ──────────────────────────────────────────────
 // PATCH /api/v1/moments/ai/:bucketID/startDate
@@ -134,7 +144,6 @@ export const updateStartDateController = async (
     const { bucketID } = req.params as { bucketID: string };
     const { startDate } = req.body as { startDate: string | undefined };
 
-    // startDate 체크
     if (!startDate || startDate.trim() === '') {
       res.status(400).json({ message: '시작 날짜는 필수입니다.' });
       return;
@@ -152,7 +161,6 @@ export const updateStartDateController = async (
     next(err);
   }
 };
-
 
 // ──────────────────────────────────────────────
 // POST /api/v1/moments/:bucketID
@@ -172,52 +180,14 @@ export const createMomentController = async (
       moments: Array<{ momentTitle: string }> | undefined;
     };
 
-
-    // frequency 체크
-    if (!frequency || frequency.trim() === '') {
-      res.status(400).json({ message: '빈도는 필수입니다.' });
-      return;
-    }
-
-    if (!BUCKET_FREQUENCIES.includes(frequency as typeof BUCKET_FREQUENCIES[number])) {
-      res.status(400).json({ message: `유효하지 않은 빈도입니다. 가능한 빈도: ${BUCKET_FREQUENCIES.join(', ')}` });
-      return;
-    }
-
-    // startDate 체크
-    if (!startDate || startDate.trim() === '') {
-      res.status(400).json({ message: '시작 날짜는 필수입니다.' });
-      return;
-    }
-
-    if (isNaN(new Date(startDate).getTime())) {
-      res.status(400).json({ message: '시작 날짜 형식이 올바르지 않습니다.' });
-      return;
-    }
-
-    // moments 체크
-    if (!moments || !Array.isArray(moments) || moments.length === 0) {
-      res.status(400).json({ message: '모멘트 목록은 필수이며 최소 1개 이상이어야 합니다.' });
-      return;
-    }
-
-    for (const moment of moments) {
-      if (!moment.momentTitle || moment.momentTitle.trim() === '') {
-        res.status(400).json({ message: '모멘트 제목은 필수입니다.' });
-        return;
-      }
-      if (moment.momentTitle.trim().length > 50) {
-        res.status(400).json({ message: '모멘트 제목은 50자 이내여야 합니다.' });
-        return;
-      }
-    }
+    if (!validateMomentBody(frequency, startDate, moments, res)) return;
 
     const data = await createMoment({
       bucketID,
       userID,
-      frequency,
-      startDate,
-      moments,
+      frequency: frequency!,
+      startDate: startDate!,
+      moments: moments!,
     });
 
     res.status(201).json({ message: '모멘트가 생성되었습니다.', data });
@@ -225,7 +195,6 @@ export const createMomentController = async (
     next(err);
   }
 };
-
 
 // ──────────────────────────────────────────────
 // PATCH /api/v1/moments/:bucketID/start/now
