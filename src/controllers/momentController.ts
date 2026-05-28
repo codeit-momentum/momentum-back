@@ -108,20 +108,55 @@ export const confirmMomentsController = async (
   try {
     const userID = req.userId!;
     const { bucketID } = req.params as { bucketID: string };
-    const { frequency, startDate, moments } = req.body as {
+    const { frequency, startDate, momentTitleArray } = req.body as {
       frequency: string | undefined;
       startDate: string | undefined;
-      moments: Array<{ momentTitle: string }> | undefined;
+      momentTitleArray: string[] | undefined;
     };
 
-    if (!validateMomentBody(frequency, startDate, moments, res)) return;
+    // frequency 체크
+    if (!frequency || frequency.trim() === '') {
+      res.status(400).json({ message: '빈도는 필수입니다.' });
+      return;
+    }
+
+    if (!BUCKET_FREQUENCIES.includes(frequency as typeof BUCKET_FREQUENCIES[number])) {
+      res.status(400).json({ message: `유효하지 않은 빈도입니다. 가능한 빈도: ${BUCKET_FREQUENCIES.join(', ')}` });
+      return;
+    }
+
+    // startDate 체크
+    if (!startDate || isNaN(new Date(startDate).getTime())) {
+      res.status(400).json({ message: '시작 날짜 형식이 올바르지 않습니다.' });
+      return;
+    }
+
+    // momentTitleArray 체크
+    if (!momentTitleArray || !Array.isArray(momentTitleArray) || momentTitleArray.length === 0) {
+      res.status(400).json({ message: '모멘트 목록은 필수이며 최소 1개 이상이어야 합니다.' });
+      return;
+    }
+
+    for (const title of momentTitleArray) {
+      if (!title || title.trim() === '') {
+        res.status(400).json({ message: '모멘트 제목은 필수입니다.' });
+        return;
+      }
+      if (title.trim().length > 100) {
+        res.status(400).json({ message: '모멘트 제목은 100자 이내여야 합니다.' });
+        return;
+      }
+    }
+
+    // momentTitleArray → moments 배열로 자동 변환
+    const moments = momentTitleArray.map((title) => ({ momentTitle: title.trim() }));
 
     const data = await confirmMoments({
       bucketID,
       userID,
-      frequency: frequency!,
-      startDate: startDate!,
-      moments: moments!,
+      frequency,
+      startDate,
+      moments,
     });
 
     res.status(201).json({ message: '모멘트 확정 저장 성공', data });
