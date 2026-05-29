@@ -4,6 +4,8 @@ import {
   confirmMoments,
   createMoment,
   getAiRecommendation,
+  getMomentDetail,
+  getMoments,
   startNow,
   updateStartDate,
 } from '../services/momentService.js';
@@ -247,6 +249,47 @@ export const startNowController = async (
     const data = await startNow(bucketID, userID);
 
     res.status(200).json({ message: '버킷리스트가 시작되었습니다.', data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// ──────────────────────────────────────────────
+// GET /api/v1/moments/:bucketID
+// 모멘트 전체 조회
+// ──────────────────────────────────────────────
+export const getMomentsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { bucketID } = req.params as { bucketID: string };
+
+    const data = await getMoments(bucketID);
+
+    res.status(200).json({ message: '모멘트 목록 조회 성공', data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ──────────────────────────────────────────────
+// GET /api/v1/moments/detail/:momentID
+// 모멘트 상세 조회
+// ──────────────────────────────────────────────
+export const getMomentDetailController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { momentID } = req.params as { momentID: string };
+
+    const data = await getMomentDetail(momentID);
+
+    res.status(200).json({ message: '모멘트 상세 조회 성공', data });
   } catch (err) {
     next(err);
   }

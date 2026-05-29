@@ -338,3 +338,62 @@ export const startNow = async (bucketID: string, userID: string) => {
 
   return { bucket: updatedBucket, moments: result.moments };
 };
+
+
+// ──────────────────────────────────────────────
+// 모멘트 전체 조회
+// GET /api/v1/moments/:bucketID
+// ──────────────────────────────────────────────
+export const getMoments = async (bucketID: string) => {
+  const bucket = await prisma.bucket.findUnique({
+    where: { id: bucketID },
+    select: { id: true },
+  });
+
+  if (!bucket) throw createError('버킷리스트를 찾을 수 없습니다.', 404);
+
+  const moments = await prisma.moment.findMany({
+    where: { bucketID },
+    orderBy: { startDate: 'asc' },
+    select: {
+      id: true,
+      bucketID: true,
+      userID: true,
+      momentTitle: true,
+      isCompleted: true,
+      photoUrl: true,
+      startDate: true,
+      endDate: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return moments;
+};
+
+// ──────────────────────────────────────────────
+// 모멘트 상세 조회
+// GET /api/v1/moments/detail/:momentID
+// ──────────────────────────────────────────────
+export const getMomentDetail = async (momentID: string) => {
+  const moment = await prisma.moment.findUnique({
+    where: { id: momentID },
+    select: {
+      id: true,
+      bucketID: true,
+      userID: true,
+      momentTitle: true,
+      isCompleted: true,
+      photoUrl: true,
+      startDate: true,
+      endDate: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  if (!moment) throw createError('모멘트를 찾을 수 없습니다.', 404);
+
+  return moment;
+};
