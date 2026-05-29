@@ -6,6 +6,7 @@ import {
   getMomentDetailController,
   getMomentsController,
   startNowController,
+  successMomentController,
   updateStartDateController,
 } from '../controllers/momentController.js';
 import { authenticate } from '../middlewares/authMiddleware.js';
@@ -14,6 +15,8 @@ import { validateBucketIDForMoment, validateMomentID } from '../middlewares/mome
 const router = express.Router();
 
 router.use(authenticate);
+
+
 // POST   /api/v1/moments/ai/:bucketID/recommendation  모멘트 추천
 router.post('/ai/:bucketID/recommendation', validateBucketIDForMoment, getAiRecommendationController);
 
@@ -22,6 +25,9 @@ router.post('/ai/:bucketID', validateBucketIDForMoment, confirmMomentsController
 
 // PATCH  /api/v1/moments/ai/:bucketID/startDate       시작 날짜 변경
 router.patch('/ai/:bucketID/startDate', validateBucketIDForMoment, updateStartDateController);
+
+// PATCH  /api/v1/moments/success/:momentID            모멘트 달성
+router.patch('/success/:momentID', validateMomentID, successMomentController);
 
 // GET    /api/v1/moments/detail/:momentID             모멘트 상세 조회
 router.get('/detail/:momentID', validateMomentID, getMomentDetailController);

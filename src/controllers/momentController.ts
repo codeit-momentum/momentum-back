@@ -7,6 +7,7 @@ import {
   getMomentDetail,
   getMoments,
   startNow,
+  successMoment,
   updateStartDate,
 } from '../services/momentService.js';
 
@@ -290,6 +291,43 @@ export const getMomentDetailController = async (
     const data = await getMomentDetail(momentID);
 
     res.status(200).json({ message: '모멘트 상세 조회 성공', data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// ──────────────────────────────────────────────
+// PATCH /api/v1/moments/success/:momentID
+// 모멘트 달성
+// ──────────────────────────────────────────────
+export const successMomentController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userID = req.userId!;
+    const { momentID } = req.params as { momentID: string };
+    const { photoUrl } = req.body as { photoUrl: string | undefined };
+
+    // photoUrl 체크
+    if (!photoUrl || photoUrl.trim() === '') {
+      res.status(400).json({ message: '인증 사진 URL은 필수입니다.' });
+      return;
+    }
+
+    // URL 형식 체크
+    try {
+      new URL(photoUrl);
+    } catch {
+      res.status(400).json({ message: '유효하지 않은 URL 형식입니다.' });
+      return;
+    }
+
+    const data = await successMoment(momentID, userID, photoUrl.trim());
+
+    res.status(200).json({ message: '모멘트를 달성하였습니다.', data });
   } catch (err) {
     next(err);
   }

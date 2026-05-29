@@ -397,3 +397,100 @@ export const getMomentDetail = async (momentID: string) => {
 
   return moment;
 };
+
+
+
+// ──────────────────────────────────────────────
+// 모멘트 달성
+// PATCH /api/v1/moments/success/:momentID
+// ──────────────────────────────────────────────
+export const successMoment = async (
+  momentID: string,
+  userID: string,
+  photoUrl: string,
+) => {
+  // 모멘트 + 버킷 한번에 조회
+  const moment = await prisma.moment.findUnique({
+    where: { id: momentID },
+    select: {
+      id: true,
+      userID: true,
+      bucketID: true,
+      isCompleted: true,
+      startDate: true,
+      endDate: true,
+      bucket: {
+        select: {
+          id: true,
+          isChallenging: true,
+          isCompleted: true,
+          totalMoment: true,
+          completedCount: true,
+        },
+      },
+    },
+  });
+
+  if (!moment) throw createError('모멘트를 찾을 수 없습니다.', 404);
+  if (moment.userID !== userID) throw createError('본인의 모멘트만 달성할 수 있습니다.', 403);
+  if (moment.isCompleted) throw createError('이미 달성된 모멘트입니다.', 400);
+  if (!moment.bucket.isChallenging) throw createError('진행 중인 버킷리스트가 아닙니다.', 400);
+  if (moment.bucket.isCompleted) throw createError('이미 달성된 버킷리스트입니다.', 400);
+
+  // 인증 날짜가 모멘트 기간 내에 있는지 체크
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const startDate = new Date(moment.startDate);
+  startDate.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(moment.endDate);
+  endDate.setHours(0, 0, 0, 0);
+
+  if (today < startDate) throw createError('아직 시작되지 않은 모멘트입니다.', 400);
+  if (today > endDate) throw createError('모멘트 기간이 종료되었습니다.', 400);
+
+  // 달성 후 completedCount
+  const newCompletedCount = moment.bucket.completedCount + 1;
+  const allCompleted = newCompletedCount === moment.bucket.totalMoment;
+
+  // 트랜잭션: 모멘트 달성 + 버킷 업데이트
+  const [updatedMoment] = await prisma.$transaction([
+    // 모멘트 달성
+    prisma.moment.update({
+      where: { id: momentID },
+      data: {
+        isCompleted: true,
+        photoUrl,
+      },
+      select: {
+        id: true,
+        bucketID: true,
+        userID: true,
+        momentTitle: true,
+        isCompleted: true,
+        photoUrl: true,
+        startDate: true,
+        endDate: true,
+        updatedAt: true,
+      },
+    }),
+    // 버킷 completedCount +1
+    // 모든 모멘트 달성 시 버킷 isCompleted: true, isChallenging: false
+    prisma.bucket.update({
+      where: { id: moment.bucketID },
+      data: {
+        completedCount: { increment: 1 },
+        ...(allCompleted && {
+          isCompleted: true,
+          isChallenging: false,
+        }),
+      },
+    }),
+  ]);
+
+  return {
+    moment: updatedMoment,
+    bucketCompleted: allCompleted,
+  };
+};
