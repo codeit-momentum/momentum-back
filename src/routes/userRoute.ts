@@ -4,7 +4,10 @@ import {
   getMyProfileController,
   getUserProfileController,
   searchUserByCodeController,
+  toggleKnockPermissionController,
+  updateMyNicknameController,
   updateMyProfileController,
+  updateMyProfileImageController,
 } from '../controllers/userController.js';
 import { authenticate } from '../middlewares/authMiddleware.js';
 import { validateUserCodeQuery, validateUserIDParam } from '../middlewares/userMiddleware.js';
@@ -16,6 +19,15 @@ router.get('/me', authenticate, getMyProfileController);
 
 // PATCH  /api/v1/users/me 내 프로필 수정 (JWT 필요)
 router.patch('/me', authenticate, updateMyProfileController);
+
+// PATCH  /api/v1/users/me/profile 프로필 이미지만 수정 (JWT 필요)
+router.patch('/me/profile', authenticate, updateMyProfileImageController);
+
+// PATCH  /api/v1/users/me/nickname 닉네임만 수정 (JWT 필요)
+router.patch('/me/nickname', authenticate, updateMyNicknameController);
+
+// PATCH  /api/v1/users/me/knock 노크 허용 여부 토글 (JWT 필요)
+router.patch('/me/knock', authenticate, toggleKnockPermissionController);
 
 // GET    /api/v1/users/search?userCode=#AZ09 유저코드로 사용자 검색 (JWT 필요)
 router.get('/search', authenticate, validateUserCodeQuery, searchUserByCodeController);

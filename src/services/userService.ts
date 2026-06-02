@@ -5,6 +5,9 @@ import {
   USER_PUBLIC_PROFILE_SELECT,
   type GetMyProfileParams,
   type SearchUserByCodeParams,
+  type ToggleKnockPermissionParams,
+  type UpdateMyNicknameParams,
+  type UpdateMyProfileImageParams,
   type UpdateMyProfileParams,
 } from '../types/user.types.js';
 import { createError } from '../utils/createError.js';
@@ -42,6 +45,35 @@ export const updateMyProfile = async (params: UpdateMyProfileParams) => {
   return prisma.user.update({
     where: { id: userID },
     data,
+    select: USER_PROFILE_SELECT,
+  });
+};
+
+// 프로필 이미지만 수정
+export const updateMyProfileImage = async (params: UpdateMyProfileImageParams) => {
+  const { userID, profile } = params;
+  return updateMyProfile({ userID, profile });
+};
+
+// 닉네임만 수정
+export const updateMyNickname = async (params: UpdateMyNicknameParams) => {
+  const { userID, nickname } = params;
+  return updateMyProfile({ userID, nickname });
+};
+
+// 노크 허용 여부 토글
+export const toggleKnockPermission = async (params: ToggleKnockPermissionParams) => {
+  const { userID } = params;
+
+  const user = await prisma.user.findUnique({
+    where: { id: userID },
+    select: { id: true, isKnocked: true },
+  });
+  if (!user) throw createError('사용자를 찾을 수 없습니다.', 404);
+
+  return prisma.user.update({
+    where: { id: userID },
+    data: { isKnocked: !user.isKnocked },
     select: USER_PROFILE_SELECT,
   });
 };

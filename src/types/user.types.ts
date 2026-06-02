@@ -11,6 +11,23 @@ export interface UpdateMyProfileParams {
   isKnocked?: boolean | undefined;
 }
 
+// 프로필 이미지만 수정 파라미터
+export interface UpdateMyProfileImageParams {
+  userID: string;
+  profile: string;
+}
+
+// 닉네임만 수정 파라미터
+export interface UpdateMyNicknameParams {
+  userID: string;
+  nickname: string;
+}
+
+// 노크 허용 여부 토글 파라미터
+export interface ToggleKnockPermissionParams {
+  userID: string;
+}
+
 // 유저코드 검색 파라미터
 export interface SearchUserByCodeParams {
   userCode: string;
