@@ -63,6 +63,26 @@ export interface SearchUserByCodeParams {
   requestUserID: string;
 }
 
+// 닉네임 검색 파라미터
+export interface SearchUsersByNicknameParams {
+  nickname: string;
+  requestUserID: string;
+}
+
+// 공개 프로필 + 관계 정보 enrichment 파라미터
+export interface EnrichPublicUserParams {
+  user: {
+    id: string;
+    nickname: string;
+    profile: string;
+    userCode: string;
+    isKnocked: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  requestUserID: string;
+}
+
 // 특정 유저 프로필 조회 파라미터
 export interface GetUserProfileParams {
   userID: string;

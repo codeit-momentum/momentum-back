@@ -1,10 +1,12 @@
 import express from 'express';
+import { block, unblock } from '../controllers/blockController.js';
 import { follow, getFollowers, getFollowing, setFollowFavorite, unfollow } from '../controllers/followController.js';
 import { getRecommendedFriendsController } from '../controllers/recommendController.js';
 import {
   getMyProfileController,
   getUserProfileController,
   searchUserByCodeController,
+  searchUsersByNicknameController,
   toggleKnockPermissionController,
   updateBrowsePublicSettingController,
   updateMyNicknameController,
@@ -15,7 +17,7 @@ import {
   updateRecommendPublicSettingController,
 } from '../controllers/userController.js';
 import { authenticate } from '../middlewares/authMiddleware.js';
-import { validateUserCodeQuery, validateUserIDParam } from '../middlewares/userMiddleware.js';
+import { validateNicknameQuery, validateUserCodeQuery, validateUserIDParam } from '../middlewares/userMiddleware.js';
 
 const router = express.Router();
 
@@ -49,6 +51,9 @@ router.patch('/me/recommend/algorithm', authenticate, updateRecommendEnabledSett
 // GET    /api/v1/users/recommend 추천친구 조회 (JWT 필요)
 router.get('/recommend', authenticate, getRecommendedFriendsController);
 
+// GET    /api/v1/users/search/nickname?nickname= 닉네임으로 사용자 검색 (JWT 필요)
+router.get('/search/nickname', authenticate, validateNicknameQuery, searchUsersByNicknameController);
+
 // GET    /api/v1/users/search?userCode=#AZ09 유저코드로 사용자 검색 (JWT 필요)
 router.get('/search', authenticate, validateUserCodeQuery, searchUserByCodeController);
 
@@ -60,6 +65,12 @@ router.post('/follow/:userID', authenticate, validateUserIDParam, follow);
 
 // DELETE /api/v1/users/follow/:userID 팔로우 취소 (JWT 필요)
 router.delete('/follow/:userID', authenticate, validateUserIDParam, unfollow);
+
+// POST   /api/v1/users/block/:userID 사용자 차단 (JWT 필요)
+router.post('/block/:userID', authenticate, validateUserIDParam, block);
+
+// DELETE /api/v1/users/block/:userID 사용자 차단 해제 (JWT 필요)
+router.delete('/block/:userID', authenticate, validateUserIDParam, unblock);
 
 // PATCH  /api/v1/users/follow/favorite/:userID 팔로우 즐겨찾기 설정 (JWT 필요)
 router.patch('/follow/favorite/:userID', authenticate, validateUserIDParam, setFollowFavorite);

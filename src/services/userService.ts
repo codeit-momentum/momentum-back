@@ -1,10 +1,16 @@
+import {
+  NICKNAME_SEARCH_LIMIT,
+  NICKNAME_SEARCH_MAX_LENGTH,
+} from '../constants/userConstants.js';
 import { prisma } from '../lib/prisma.js';
 import {
+  type EnrichPublicUserParams,
   type GetUserProfileParams,
   USER_PROFILE_SELECT,
   USER_PUBLIC_PROFILE_SELECT,
   type GetMyProfileParams,
   type SearchUserByCodeParams,
+  type SearchUsersByNicknameParams,
   type ToggleKnockPermissionParams,
   type UpdateBrowsePublicSettingParams,
   type UpdateMyNicknameParams,
@@ -26,6 +32,83 @@ const assertRandomFeedEnabled = (isRandomFeed: boolean) => {
   if (!isRandomFeed) {
     throw createError('랜덤피드 허용이 켜져 있어야 이 설정을 변경할 수 있습니다.', 400);
   }
+};
+
+// 차단 관계(양방향) 사용자 ID 집합
+export const getBlockedUserIDSet = async (userID: string): Promise<Set<string>> => {
+  const blocks = await prisma.block.findMany({
+    where: {
+      OR: [{ blockerID: userID }, { blockedID: userID }],
+    },
+    select: { blockerID: true, blockedID: true },
+  });
+
+  const blockedIDs = new Set<string>();
+  for (const block of blocks) {
+    if (block.blockerID === userID) blockedIDs.add(block.blockedID);
+    if (block.blockedID === userID) blockedIDs.add(block.blockerID);
+  }
+  return blockedIDs;
+};
+
+const assertNotBlocked = async (requestUserID: string, targetUserID: string) => {
+  const block = await prisma.block.findFirst({
+    where: {
+      OR: [
+        { blockerID: requestUserID, blockedID: targetUserID },
+        { blockerID: targetUserID, blockedID: requestUserID },
+      ],
+    },
+    select: { id: true },
+  });
+  if (block) throw createError('차단된 사용자입니다.', 403);
+};
+
+// 공개 프로필 + 팔로우·차단 관계 정보
+export const enrichPublicUser = async (params: EnrichPublicUserParams) => {
+  const { user, requestUserID } = params;
+
+  const [followerCount, followingCount, following, blockedByMe, blockedMe] = await Promise.all([
+    prisma.follow.count({ where: { followingID: user.id } }),
+    prisma.follow.count({ where: { followerID: user.id } }),
+    prisma.follow.findUnique({
+      where: {
+        followerID_followingID: {
+          followerID: requestUserID,
+          followingID: user.id,
+        },
+      },
+      select: { id: true },
+    }),
+    prisma.block.findUnique({
+      where: {
+        blockerID_blockedID: {
+          blockerID: requestUserID,
+          blockedID: user.id,
+        },
+      },
+      select: { id: true },
+    }),
+    prisma.block.findUnique({
+      where: {
+        blockerID_blockedID: {
+          blockerID: user.id,
+          blockedID: requestUserID,
+        },
+      },
+      select: { id: true },
+    }),
+  ]);
+
+  return {
+    ...user,
+    followerCount,
+    followingCount,
+    isFollowing: Boolean(following),
+    isMe: user.id === requestUserID,
+    isBlocked: Boolean(blockedByMe),
+    isBlockedBy: Boolean(blockedMe),
+  };
 };
 
 // 내 프로필 조회
@@ -175,27 +258,34 @@ export const searchUserByCode = async (params: SearchUserByCodeParams) => {
 
   if (!user) throw createError('사용자를 찾을 수 없습니다.', 404);
 
-  const [followerCount, followingCount, following] = await Promise.all([
-    prisma.follow.count({ where: { followingID: user.id } }),
-    prisma.follow.count({ where: { followerID: user.id } }),
-    prisma.follow.findUnique({
-      where: {
-        followerID_followingID: {
-          followerID: requestUserID,
-          followingID: user.id,
-        },
-      },
-      select: { id: true },
-    }),
-  ]);
+  await assertNotBlocked(requestUserID, user.id);
 
-  return {
-    ...user,
-    followerCount,
-    followingCount,
-    isFollowing: Boolean(following),
-    isMe: user.id === requestUserID,
-  };
+  return enrichPublicUser({ user, requestUserID });
+};
+
+// 닉네임으로 사용자 검색 (부분 일치)
+export const searchUsersByNickname = async (params: SearchUsersByNicknameParams) => {
+  const { nickname, requestUserID } = params;
+  const trimmed = nickname.trim();
+
+  if (trimmed.length > NICKNAME_SEARCH_MAX_LENGTH) {
+    throw createError(`닉네임은 ${NICKNAME_SEARCH_MAX_LENGTH}자 이내로 검색해야 합니다.`, 400);
+  }
+
+  const blockedIDs = await getBlockedUserIDSet(requestUserID);
+  const excludeUserIDs = [requestUserID, ...blockedIDs];
+
+  const users = await prisma.user.findMany({
+    where: {
+      nickname: { contains: trimmed, mode: 'insensitive' },
+      id: { notIn: excludeUserIDs },
+    },
+    select: USER_PUBLIC_PROFILE_SELECT,
+    take: NICKNAME_SEARCH_LIMIT,
+    orderBy: { nickname: 'asc' },
+  });
+
+  return Promise.all(users.map((user) => enrichPublicUser({ user, requestUserID })));
 };
 
 // 특정 유저 프로필 조회
@@ -209,25 +299,7 @@ export const getUserProfile = async (params: GetUserProfileParams) => {
 
   if (!user) throw createError('사용자를 찾을 수 없습니다.', 404);
 
-  const [followerCount, followingCount, following] = await Promise.all([
-    prisma.follow.count({ where: { followingID: userID } }),
-    prisma.follow.count({ where: { followerID: userID } }),
-    prisma.follow.findUnique({
-      where: {
-        followerID_followingID: {
-          followerID: requestUserID,
-          followingID: userID,
-        },
-      },
-      select: { id: true },
-    }),
-  ]);
+  await assertNotBlocked(requestUserID, userID);
 
-  return {
-    ...user,
-    followerCount,
-    followingCount,
-    isFollowing: Boolean(following),
-    isMe: user.id === requestUserID,
-  };
+  return enrichPublicUser({ user, requestUserID });
 };

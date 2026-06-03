@@ -4,6 +4,7 @@ import {
   getMyProfile,
   getUserProfile,
   searchUserByCode,
+  searchUsersByNickname,
   toggleKnockPermission,
   updateBrowsePublicSetting,
   updateMyNickname,
@@ -252,6 +253,27 @@ export const updateRecommendEnabledSettingController = async (
 
     const data = await updateRecommendEnabledSetting({ userID, isRecommendEnabled: isRecommendEnabledValue });
     res.status(200).json({ message: '추천친구 알고리즘 허용 여부 변경 성공', data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// 닉네임으로 사용자 검색 컨트롤러
+export const searchUsersByNicknameController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const requestUserID = req.userId!;
+    const { nickname } = req.query as { nickname: string };
+
+    const data = await searchUsersByNickname({
+      nickname: nickname.trim(),
+      requestUserID,
+    });
+
+    res.status(200).json({ message: '닉네임 검색 성공', data });
   } catch (err) {
     next(err);
   }

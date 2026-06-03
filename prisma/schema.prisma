@@ -32,8 +32,10 @@ model User {
   buckets   Bucket[]
   moments   Moment[]
   userTerms UserTerm[]
-  following Follow[] @relation("UserFollowing")
-  followers Follow[] @relation("UserFollowers")
+  following      Follow[] @relation("UserFollowing")
+  followers      Follow[] @relation("UserFollowers")
+  blocking       Block[]  @relation("UserBlocking")
+  blockedByUsers Block[]  @relation("UserBlocked")
 
   @@map("user") // MongoDB 컬렉션 이름을 "user"로 지정
 }
@@ -80,6 +82,20 @@ model Follow {
 
   @@unique([followerID, followingID])
   @@map("follow")
+}
+
+model Block {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  blockerID String
+  blockedID String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blocker User @relation("UserBlocking", fields: [blockerID], references: [id])
+  blocked User @relation("UserBlocked", fields: [blockedID], references: [id])
+
+  @@unique([blockerID, blockedID])
+  @@map("block")
 }
 
 model Bucket {

@@ -1,5 +1,6 @@
 import { RECOMMEND_FRIENDS_LIMIT } from '../constants/userConstants.js';
 import { prisma } from '../lib/prisma.js';
+import { getBlockedUserIDSet } from './userService.js';
 import type { GetRecommendedFriendsParams } from '../types/user.types.js';
 import { RECOMMEND_USER_SELECT, type RecommendedFriend } from '../types/recommend.types.js';
 import { createError } from '../utils/createError.js';
@@ -37,7 +38,8 @@ export const getRecommendedFriends = async (params: GetRecommendedFriendsParams)
   ]);
 
   const myCategories = collectCategories(myBuckets);
-  const excludeUserIDs = new Set([userID, ...followingRows.map((row) => row.followingID)]);
+  const blockedIDs = await getBlockedUserIDSet(userID);
+  const excludeUserIDs = new Set([userID, ...followingRows.map((row) => row.followingID), ...blockedIDs]);
 
   const candidates = await prisma.user.findMany({
     where: {

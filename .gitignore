@@ -7,10 +7,7 @@ node_modules/
 dist/
 http/
 docs/
-/generated/prisma
-
-/generated/prisma
-
+scripts/test-all-apis*
 /generated/prisma
 
 #.cursor
