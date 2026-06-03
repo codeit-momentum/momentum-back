@@ -28,6 +28,35 @@ export interface ToggleKnockPermissionParams {
   userID: string;
 }
 
+// 랜덤피드 허용 여부 수정 파라미터
+export interface UpdateRandomFeedSettingParams {
+  userID: string;
+  isRandomFeed: boolean;
+}
+
+// 둘러보기 공개 여부 수정 파라미터
+export interface UpdateBrowsePublicSettingParams {
+  userID: string;
+  isPublic: boolean;
+}
+
+// 추천친구 공개 여부 수정 파라미터
+export interface UpdateRecommendPublicSettingParams {
+  userID: string;
+  isRecommendPublic: boolean;
+}
+
+// 추천친구 알고리즘 허용 여부 수정 파라미터
+export interface UpdateRecommendEnabledSettingParams {
+  userID: string;
+  isRecommendEnabled: boolean;
+}
+
+// 추천친구 조회 파라미터
+export interface GetRecommendedFriendsParams {
+  userID: string;
+}
+
 // 유저코드 검색 파라미터
 export interface SearchUserByCodeParams {
   userCode: string;
@@ -50,6 +79,10 @@ export const USER_PROFILE_SELECT = {
   userCode: true,
   isKnocked: true,
   isAgreed: true,
+  isRandomFeed: true,
+  isPublic: true,
+  isRecommendPublic: true,
+  isRecommendEnabled: true,
   createdAt: true,
   updatedAt: true,
 } as const;

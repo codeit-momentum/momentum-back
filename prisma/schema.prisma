@@ -22,8 +22,12 @@ model User {
   userCode   String   @unique
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  isKnocked  Boolean  @default(true)
-  isAgreed   Boolean  @default(false) // 약관 동의 완료 여부 (필수 약관 모두 동의 시 true)
+  isKnocked          Boolean  @default(true)
+  isAgreed           Boolean  @default(false) // 약관 동의 완료 여부 (필수 약관 모두 동의 시 true)
+  isRandomFeed       Boolean  @default(false) // 랜덤피드 허용 (내가 상대 랜덤 피드 보기)
+  isPublic           Boolean  @default(false) // 둘러보기 공개 (랜덤 상대에게 내 피드 보기 허용)
+  isRecommendPublic  Boolean  @default(false) // 추천친구 목록에 나를 공개
+  isRecommendEnabled Boolean  @default(false) // 유사 유저 추천 알고리즘 허용 (모멘트/버킷 카테고리 기준)
 
   buckets   Bucket[]
   moments   Moment[]

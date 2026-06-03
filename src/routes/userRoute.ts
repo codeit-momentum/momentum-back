@@ -1,13 +1,18 @@
 import express from 'express';
 import { follow, getFollowers, getFollowing, setFollowFavorite, unfollow } from '../controllers/followController.js';
+import { getRecommendedFriendsController } from '../controllers/recommendController.js';
 import {
   getMyProfileController,
   getUserProfileController,
   searchUserByCodeController,
   toggleKnockPermissionController,
+  updateBrowsePublicSettingController,
   updateMyNicknameController,
   updateMyProfileController,
   updateMyProfileImageController,
+  updateRandomFeedSettingController,
+  updateRecommendEnabledSettingController,
+  updateRecommendPublicSettingController,
 } from '../controllers/userController.js';
 import { authenticate } from '../middlewares/authMiddleware.js';
 import { validateUserCodeQuery, validateUserIDParam } from '../middlewares/userMiddleware.js';
@@ -28,6 +33,21 @@ router.patch('/me/nickname', authenticate, updateMyNicknameController);
 
 // PATCH  /api/v1/users/me/knock 노크 허용 여부 토글 (JWT 필요)
 router.patch('/me/knock', authenticate, toggleKnockPermissionController);
+
+// PATCH  /api/v1/users/me/browse/random-feed 랜덤피드 허용 여부 수정 (JWT 필요)
+router.patch('/me/browse/random-feed', authenticate, updateRandomFeedSettingController);
+
+// PATCH  /api/v1/users/me/browse/public 둘러보기 공개 여부 수정 (JWT 필요)
+router.patch('/me/browse/public', authenticate, updateBrowsePublicSettingController);
+
+// PATCH  /api/v1/users/me/recommend/public 추천친구 공개 여부 수정 (JWT 필요)
+router.patch('/me/recommend/public', authenticate, updateRecommendPublicSettingController);
+
+// PATCH  /api/v1/users/me/recommend/algorithm 추천친구 알고리즘 허용 여부 수정 (JWT 필요)
+router.patch('/me/recommend/algorithm', authenticate, updateRecommendEnabledSettingController);
+
+// GET    /api/v1/users/recommend 추천친구 조회 (JWT 필요)
+router.get('/recommend', authenticate, getRecommendedFriendsController);
 
 // GET    /api/v1/users/search?userCode=#AZ09 유저코드로 사용자 검색 (JWT 필요)
 router.get('/search', authenticate, validateUserCodeQuery, searchUserByCodeController);

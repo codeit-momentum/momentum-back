@@ -6,3 +6,6 @@ export const DEFAULT_PROFILE_IMAGE = '기본이미지';
 
 // 유저코드 형식 (# + 대문자/숫자 4자리)
 export const USER_CODE_REGEX = /^#[A-Z0-9]{4}$/;
+
+// 추천친구 조회 최대 반환 수
+export const RECOMMEND_FRIENDS_LIMIT = 10;
