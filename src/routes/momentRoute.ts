@@ -2,9 +2,11 @@ import express from 'express';
 import {
   confirmMomentsController,
   createMomentController,
+  deleteMomentController,
   getAiRecommendationController,
   getMomentDetailController,
   getMomentsController,
+  getTodayMomentsController,
   startNowController,
   successMomentController,
   updateStartDateController,
@@ -29,6 +31,9 @@ router.patch('/ai/:bucketID/startDate', validateBucketIDForMoment, updateStartDa
 // PATCH  /api/v1/moments/success/:momentID            모멘트 달성
 router.patch('/success/:momentID', validateMomentID, successMomentController);
 
+// GET    /api/v1/moments/today                        오늘 인증 모멘트
+router.get('/today', getTodayMomentsController);
+
 // GET    /api/v1/moments/detail/:momentID             모멘트 상세 조회
 router.get('/detail/:momentID', validateMomentID, getMomentDetailController);
 
@@ -40,5 +45,9 @@ router.patch('/:bucketID/start/now', validateBucketIDForMoment, startNowControll
 
 // GET    /api/v1/moments/:bucketID                    모멘트 전체 조회
 router.get('/:bucketID', validateBucketIDForMoment, getMomentsController);
+
+// DELETE /api/v1/moments/:momentID                    모멘트 삭제
+router.delete('/:momentID', validateMomentID, deleteMomentController);
+
 
 export default router;

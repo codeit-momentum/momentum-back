@@ -494,3 +494,92 @@ export const successMoment = async (
     bucketCompleted: allCompleted,
   };
 };
+
+
+
+// ──────────────────────────────────────────────
+// 오늘 인증 모멘트
+// GET /api/v1/moments/today
+// ──────────────────────────────────────────────
+export const getTodayMoments = async (userID: string) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const moments = await prisma.moment.findMany({
+    where: {
+      userID,
+      startDate: { lte: tomorrow },  
+      endDate: { gte: today },        
+      bucket: {
+        isChallenging: true,         
+        isCompleted: false,       
+      },
+    },
+    orderBy: { startDate: 'asc' },
+    select: {
+      id: true,
+      bucketID: true,
+      userID: true,
+      momentTitle: true,
+      isCompleted: true,
+      photoUrl: true,
+      startDate: true,
+      endDate: true,
+      createdAt: true,
+      updatedAt: true,
+      bucket: {
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          thumbnail: true,
+        },
+      },
+    },
+  });
+
+  return moments;
+};
+
+
+// ──────────────────────────────────────────────
+// 모멘트 삭제
+// DELETE /api/v1/moments/:momentID
+// ──────────────────────────────────────────────
+export const deleteMoment = async (momentID: string, userID: string) => {
+  const moment = await prisma.moment.findUnique({
+    where: { id: momentID },
+    select: {
+      id: true,
+      userID: true,
+      bucketID: true,
+      isCompleted: true,
+      bucket: {
+        select: {
+          isCompleted: true,
+        },
+      },
+    },
+  });
+
+  if (!moment) throw createError('모멘트를 찾을 수 없습니다.', 404);
+  if (moment.userID !== userID) throw createError('본인의 모멘트만 삭제할 수 있습니다.', 403);
+  if (moment.bucket.isCompleted) throw createError('달성된 버킷리스트의 모멘트는 삭제할 수 없습니다.', 400);
+  if (moment.isCompleted) throw createError('이미 달성된 모멘트는 삭제할 수 없습니다.', 400);
+
+  // 트랜잭션: 모멘트 삭제 + 버킷 totalMoment -1
+  await prisma.$transaction([
+    prisma.moment.delete({
+      where: { id: momentID },
+    }),
+    prisma.bucket.update({
+      where: { id: moment.bucketID },
+      data: { totalMoment: { decrement: 1 } },
+    }),
+  ]);
+
+  return { momentID };
+};

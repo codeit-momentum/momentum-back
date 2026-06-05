@@ -3,12 +3,14 @@ import { BUCKET_FREQUENCIES } from '../constants/bucketConstants.js';
 import {
   confirmMoments,
   createMoment,
+  deleteMoment,
   getAiRecommendation,
   getMomentDetail,
   getMoments,
+  getTodayMoments,
   startNow,
   successMoment,
-  updateStartDate,
+  updateStartDate
 } from '../services/momentService.js';
 
 // ──────────────────────────────────────────────
@@ -328,6 +330,50 @@ export const successMomentController = async (
     const data = await successMoment(momentID, userID, photoUrl.trim());
 
     res.status(200).json({ message: '모멘트를 달성하였습니다.', data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+// ──────────────────────────────────────────────
+// GET /api/v1/moments/today
+// 오늘 인증 모멘트
+// ──────────────────────────────────────────────
+export const getTodayMomentsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userID = req.userId!;
+
+    const data = await getTodayMoments(userID);
+
+    res.status(200).json({ message: '오늘 인증 모멘트 조회 성공', data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+
+
+// ──────────────────────────────────────────────
+// DELETE /api/v1/moments/:momentID
+// 모멘트 삭제
+// ──────────────────────────────────────────────
+export const deleteMomentController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const userID = req.userId!;
+    const { momentID } = req.params as { momentID: string };
+
+    const data = await deleteMoment(momentID, userID);
+
+    res.status(200).json({ message: '모멘트가 삭제되었습니다.', data });
   } catch (err) {
     next(err);
   }
