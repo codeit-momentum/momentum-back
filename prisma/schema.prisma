@@ -113,6 +113,7 @@ model Bucket {
   totalCheer     Float     @default(0)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  frequency      String    @default("daily") // "daily" | "biDaily" | "weekly"
 
   user    User     @relation(fields: [userID], references: [id])
   moments Moment[]
