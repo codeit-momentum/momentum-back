@@ -15,13 +15,127 @@ datasource db {
 }
 
 model User {
-  id         String   @id @map("_id") 
+  id         String   @id @map("_id")
   nickname   String
   email      String   @unique
   profile    String   @default("기본이미지")
   userCode   String   @unique
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  isKnocked  Boolean  @default(true)
+  isKnocked          Boolean  @default(true)
+  isAgreed           Boolean  @default(false) // 약관 동의 완료 여부 (필수 약관 모두 동의 시 true)
+  isRandomFeed       Boolean  @default(false) // 랜덤피드 허용 (내가 상대 랜덤 피드 보기)
+  isPublic           Boolean  @default(false) // 둘러보기 공개 (랜덤 상대에게 내 피드 보기 허용)
+  isRecommendPublic  Boolean  @default(false) // 추천친구 목록에 나를 공개
+  isRecommendEnabled Boolean  @default(false) // 유사 유저 추천 알고리즘 허용 (모멘트/버킷 카테고리 기준)
+
+  buckets   Bucket[]
+  moments   Moment[]
+  userTerms UserTerm[]
+  following      Follow[] @relation("UserFollowing")
+  followers      Follow[] @relation("UserFollowers")
+  blocking       Block[]  @relation("UserBlocking")
+  blockedByUsers Block[]  @relation("UserBlocked")
+
   @@map("user") // MongoDB 컬렉션 이름을 "user"로 지정
+}
+
+model Term {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @unique
+  content   String
+  type      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userTerms UserTerm[]
+
+  @@map("term") // MongoDB 컬렉션 이름을 "term"로 지정
+}
+
+model UserTerm {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userID    String
+  termID    String   @db.ObjectId
+  agreed    Boolean  @default(false)
+  agreedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userID], references: [id])
+  term Term @relation(fields: [termID], references: [id])
+
+  @@unique([userID, termID])
+  @@map("userTerm")
+}
+
+model Follow {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  followerID  String
+  followingID String
+  isFavorite  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  follower  User @relation("UserFollowing", fields: [followerID], references: [id])
+  following User @relation("UserFollowers", fields: [followingID], references: [id])
+
+  @@unique([followerID, followingID])
+  @@map("follow")
+}
+
+model Block {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  blockerID String
+  blockedID String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blocker User @relation("UserBlocking", fields: [blockerID], references: [id])
+  blocked User @relation("UserBlocked", fields: [blockedID], references: [id])
+
+  @@unique([blockerID, blockedID])
+  @@map("block")
+}
+
+model Bucket {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  userID         String
+  title          String
+  category       String[]  @default([])
+  thumbnail      String    @default("기본이미지URL")
+  totalMoment    Float     @default(0)
+  completedCount Float     @default(0)
+  isCompleted    Boolean   @default(false)
+  isChallenging  Boolean   @default(false)
+  startDate      DateTime?
+  endDate        DateTime?
+  totalCheer     Float     @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  frequency      String    @default("daily") // "daily" | "biDaily" | "weekly"
+
+  user    User     @relation(fields: [userID], references: [id])
+  moments Moment[]
+
+  @@map("bucket")
+}
+
+
+model Moment {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  bucketID    String   @db.ObjectId
+  userID      String
+  momentTitle String
+  isCompleted Boolean  @default(false)
+  photoUrl    String   @default("")
+  startDate   DateTime @default(now())
+  endDate     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  bucket Bucket @relation(fields: [bucketID], references: [id])
+  user   User   @relation(fields: [userID], references: [id])
+
+  @@map("moment")
 }

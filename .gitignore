@@ -6,10 +6,8 @@ node_modules/
 
 dist/
 http/
-/generated/prisma
-
-/generated/prisma
-
+docs/
+scripts/
 /generated/prisma
 
 #.cursor
