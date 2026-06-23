@@ -14,7 +14,6 @@ export interface GptRecommendationRawResponse {
   title: string;
   category: string;
   userID: string;
-  durationDays: number;
   totalMoment: number;
   momentTitleArray: string[];
   fallback: boolean;
@@ -30,5 +29,6 @@ export interface ConfirmMomentsParams {
   userID: string;
   frequency: string;
   startDate: string;
+  totalMoment: number;
   moments: ConfirmMomentItem[];
 }
