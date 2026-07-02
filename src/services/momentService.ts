@@ -110,6 +110,19 @@ export const getAiRecommendation = async (
       throw new Error('GPT 응답 형식이 올바르지 않습니다.');
     }
 
+    // momentTitleArray 개수가 totalMoment와 다르면 자동 조정
+    if (parsed.momentTitleArray.length !== totalMoment) {
+      if (parsed.momentTitleArray.length > totalMoment) {
+        // 초과분 제거
+        parsed.momentTitleArray = parsed.momentTitleArray.slice(0, totalMoment);
+      } else {
+        // 부족분 채우기
+        while (parsed.momentTitleArray.length < totalMoment) {
+          parsed.momentTitleArray.push(`${parsed.momentTitleArray.length + 1}번째 모멘트`);
+        }
+      }
+    }
+
     return {
       momentTitleArray: parsed.momentTitleArray,
       fallback: parsed.fallback,
