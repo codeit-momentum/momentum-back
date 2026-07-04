@@ -54,7 +54,7 @@ const calcMomentDates = (
 export const getAiRecommendation = async (
   bucketID: string,
   userID: string,
-  durationDays: number,
+  totalMoment: number,
 ): Promise<GptRecommendationResponse> => {
 
   const bucket = await prisma.bucket.findUnique({
@@ -75,13 +75,12 @@ export const getAiRecommendation = async (
         variables: {
           title: bucket.title,
           userid: userID,
-          durationdays: String(durationDays),
+          durationdays: String(totalMoment),
           category,
         },
       },
     });
 
-    // output JSON 파싱
     const content = response.output
       .filter((item) => item.type === 'message')
       .flatMap((item) => {
@@ -101,7 +100,6 @@ export const getAiRecommendation = async (
       title: string;
       category: string;
       userID: string;
-      durationDays: number;
       totalMoment: number;
       momentTitleArray: string[];
       fallback: boolean;
@@ -110,6 +108,19 @@ export const getAiRecommendation = async (
 
     if (!Array.isArray(parsed.momentTitleArray)) {
       throw new Error('GPT 응답 형식이 올바르지 않습니다.');
+    }
+
+    // momentTitleArray 개수가 totalMoment와 다르면 자동 조정
+    if (parsed.momentTitleArray.length !== totalMoment) {
+      if (parsed.momentTitleArray.length > totalMoment) {
+        // 초과분 제거
+        parsed.momentTitleArray = parsed.momentTitleArray.slice(0, totalMoment);
+      } else {
+        // 부족분 채우기
+        while (parsed.momentTitleArray.length < totalMoment) {
+          parsed.momentTitleArray.push(`${parsed.momentTitleArray.length + 1}번째 모멘트`);
+        }
+      }
     }
 
     return {
@@ -128,7 +139,7 @@ export const getAiRecommendation = async (
 // 모멘트 저장 공통 로직 (AI 확정 저장 + 수동 생성)
 // ──────────────────────────────────────────────
 const saveMoments = async (params: ConfirmMomentsParams) => {
-  const { bucketID, userID, frequency, startDate, moments } = params;
+  const { bucketID, userID, frequency, startDate, totalMoment, moments } = params;
 
   const bucket = await prisma.bucket.findUnique({
     where: { id: bucketID },
@@ -152,7 +163,7 @@ const saveMoments = async (params: ConfirmMomentsParams) => {
         frequency,
         startDate: bucketStart,
         endDate: bucketEnd,
-        totalMoment: moments.length,
+        totalMoment,
       },
       select: {
         id: true,
@@ -213,7 +224,7 @@ export const createMoment = async (params: ConfirmMomentsParams) => {
 };
 
 // ──────────────────────────────────────────────
-// 날짜 재계산 공통 로직 (시작 날짜 변경 + 지금 바로 시작)
+// 날짜 재계산 공통 로직
 // ──────────────────────────────────────────────
 const recalcMomentDates = async (
   bucketID: string,
@@ -316,7 +327,6 @@ export const startNow = async (bucketID: string, userID: string) => {
 
   const result = await recalcMomentDates(bucketID, userID, today);
 
-  // isChallenging: true 업데이트 추가
   const updatedBucket = await prisma.bucket.update({
     where: { id: bucketID },
     data: { isChallenging: true },
@@ -339,7 +349,6 @@ export const startNow = async (bucketID: string, userID: string) => {
   return { bucket: updatedBucket, moments: result.moments };
 };
 
-
 // ──────────────────────────────────────────────
 // 모멘트 전체 조회
 // GET /api/v1/moments/:bucketID
@@ -352,7 +361,7 @@ export const getMoments = async (bucketID: string) => {
 
   if (!bucket) throw createError('버킷리스트를 찾을 수 없습니다.', 404);
 
-  const moments = await prisma.moment.findMany({
+  return await prisma.moment.findMany({
     where: { bucketID },
     orderBy: { startDate: 'asc' },
     select: {
@@ -368,8 +377,6 @@ export const getMoments = async (bucketID: string) => {
       updatedAt: true,
     },
   });
-
-  return moments;
 };
 
 // ──────────────────────────────────────────────
@@ -398,8 +405,6 @@ export const getMomentDetail = async (momentID: string) => {
   return moment;
 };
 
-
-
 // ──────────────────────────────────────────────
 // 모멘트 달성
 // PATCH /api/v1/moments/success/:momentID
@@ -409,7 +414,6 @@ export const successMoment = async (
   userID: string,
   photoUrl: string,
 ) => {
-  // 모멘트 + 버킷 한번에 조회
   const moment = await prisma.moment.findUnique({
     where: { id: momentID },
     select: {
@@ -437,7 +441,6 @@ export const successMoment = async (
   if (!moment.bucket.isChallenging) throw createError('진행 중인 버킷리스트가 아닙니다.', 400);
   if (moment.bucket.isCompleted) throw createError('이미 달성된 버킷리스트입니다.', 400);
 
-  // 인증 날짜가 모멘트 기간 내에 있는지 체크
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -450,19 +453,13 @@ export const successMoment = async (
   if (today < startDate) throw createError('아직 시작되지 않은 모멘트입니다.', 400);
   if (today > endDate) throw createError('모멘트 기간이 종료되었습니다.', 400);
 
-  // 달성 후 completedCount
   const newCompletedCount = moment.bucket.completedCount + 1;
   const allCompleted = newCompletedCount === moment.bucket.totalMoment;
 
-  // 트랜잭션: 모멘트 달성 + 버킷 업데이트
   const [updatedMoment] = await prisma.$transaction([
-    // 모멘트 달성
     prisma.moment.update({
       where: { id: momentID },
-      data: {
-        isCompleted: true,
-        photoUrl,
-      },
+      data: { isCompleted: true, photoUrl },
       select: {
         id: true,
         bucketID: true,
@@ -475,8 +472,6 @@ export const successMoment = async (
         updatedAt: true,
       },
     }),
-    // 버킷 completedCount +1
-    // 모든 모멘트 달성 시 버킷 isCompleted: true, isChallenging: false
     prisma.bucket.update({
       where: { id: moment.bucketID },
       data: {
@@ -489,13 +484,8 @@ export const successMoment = async (
     }),
   ]);
 
-  return {
-    moment: updatedMoment,
-    bucketCompleted: allCompleted,
-  };
+  return { moment: updatedMoment, bucketCompleted: allCompleted };
 };
-
-
 
 // ──────────────────────────────────────────────
 // 오늘 인증 모멘트
@@ -508,14 +498,14 @@ export const getTodayMoments = async (userID: string) => {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const moments = await prisma.moment.findMany({
+  return await prisma.moment.findMany({
     where: {
       userID,
-      startDate: { lte: tomorrow },  
-      endDate: { gte: today },        
+      startDate: { lte: tomorrow },
+      endDate: { gte: today },
       bucket: {
-        isChallenging: true,         
-        isCompleted: false,       
+        isChallenging: true,
+        isCompleted: false,
       },
     },
     orderBy: { startDate: 'asc' },
@@ -540,10 +530,7 @@ export const getTodayMoments = async (userID: string) => {
       },
     },
   });
-
-  return moments;
 };
-
 
 // ──────────────────────────────────────────────
 // 모멘트 삭제
@@ -558,9 +545,7 @@ export const deleteMoment = async (momentID: string, userID: string) => {
       bucketID: true,
       isCompleted: true,
       bucket: {
-        select: {
-          isCompleted: true,
-        },
+        select: { isCompleted: true },
       },
     },
   });
@@ -570,11 +555,8 @@ export const deleteMoment = async (momentID: string, userID: string) => {
   if (moment.bucket.isCompleted) throw createError('달성된 버킷리스트의 모멘트는 삭제할 수 없습니다.', 400);
   if (moment.isCompleted) throw createError('이미 달성된 모멘트는 삭제할 수 없습니다.', 400);
 
-  // 트랜잭션: 모멘트 삭제 + 버킷 totalMoment -1
   await prisma.$transaction([
-    prisma.moment.delete({
-      where: { id: momentID },
-    }),
+    prisma.moment.delete({ where: { id: momentID } }),
     prisma.bucket.update({
       where: { id: moment.bucketID },
       data: { totalMoment: { decrement: 1 } },

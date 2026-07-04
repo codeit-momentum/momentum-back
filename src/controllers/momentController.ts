@@ -10,7 +10,7 @@ import {
   getTodayMoments,
   startNow,
   successMoment,
-  updateStartDate
+  updateStartDate,
 } from '../services/momentService.js';
 
 // ──────────────────────────────────────────────
@@ -19,6 +19,7 @@ import {
 const validateMomentBody = (
   frequency: string | undefined,
   startDate: string | undefined,
+  totalMoment: number | undefined,
   moments: Array<{ momentTitle: string }> | undefined,
   res: Response,
 ): boolean => {
@@ -37,8 +38,28 @@ const validateMomentBody = (
     return false;
   }
 
+  if (totalMoment === undefined || totalMoment === null) {
+    res.status(400).json({ message: '총 모멘트 개수는 필수입니다.' });
+    return false;
+  }
+
+  if (typeof totalMoment !== 'number' || !Number.isInteger(totalMoment)) {
+    res.status(400).json({ message: '총 모멘트 개수는 정수여야 합니다.' });
+    return false;
+  }
+
+  if (totalMoment < 1) {
+    res.status(400).json({ message: '총 모멘트 개수는 1개 이상이어야 합니다.' });
+    return false;
+  }
+
   if (!moments || !Array.isArray(moments) || moments.length === 0) {
     res.status(400).json({ message: '모멘트 목록은 필수이며 최소 1개 이상이어야 합니다.' });
+    return false;
+  }
+
+  if (moments.length !== totalMoment) {
+    res.status(400).json({ message: `총 모멘트 개수(${totalMoment})와 모멘트 목록 개수(${moments.length})가 일치하지 않습니다.` });
     return false;
   }
 
@@ -47,8 +68,8 @@ const validateMomentBody = (
       res.status(400).json({ message: '모멘트 제목은 필수입니다.' });
       return false;
     }
-    if (moment.momentTitle.trim().length > 50) {
-      res.status(400).json({ message: '모멘트 제목은 50자 이내여야 합니다.' });
+    if (moment.momentTitle.trim().length > 100) {
+      res.status(400).json({ message: '모멘트 제목은 100자 이내여야 합니다.' });
       return false;
     }
   }
@@ -68,32 +89,29 @@ export const getAiRecommendationController = async (
   try {
     const userID = req.userId!;
     const { bucketID } = req.params as { bucketID: string };
-    const { durationDays } = req.body as {
-      durationDays: number | undefined;
-    };
+    const { totalMoment } = req.body as { totalMoment: number | undefined };
 
-    if (durationDays === undefined || durationDays === null) {
-      res.status(400).json({ message: '예상 소요 일수는 필수입니다.' });
+    if (totalMoment === undefined || totalMoment === null) {
+      res.status(400).json({ message: '총 모멘트 개수는 필수입니다.' });
       return;
     }
 
-    if (typeof durationDays !== 'number' || !Number.isInteger(durationDays)) {
-      res.status(400).json({ message: '예상 소요 일수는 정수여야 합니다.' });
+    if (typeof totalMoment !== 'number' || !Number.isInteger(totalMoment)) {
+      res.status(400).json({ message: '총 모멘트 개수는 정수여야 합니다.' });
       return;
     }
 
-    if (durationDays < 1) {
-      res.status(400).json({ message: '예상 소요 일수는 1일 이상이어야 합니다.' });
+    if (totalMoment < 1) {
+      res.status(400).json({ message: '총 모멘트 개수는 1개 이상이어야 합니다.' });
       return;
     }
 
-    if (durationDays > 365) {
-      res.status(400).json({ message: '예상 소요 일수는 365일 이하여야 합니다.' });
+    if (totalMoment > 365) {
+      res.status(400).json({ message: '총 모멘트 개수는 365개 이하여야 합니다.' });
       return;
     }
 
-
-    const data = await getAiRecommendation(bucketID, userID, durationDays);
+    const data = await getAiRecommendation(bucketID, userID, totalMoment);
 
     res.status(200).json({ message: 'AI 모멘트 추천 성공', data });
   } catch (err) {
@@ -113,55 +131,24 @@ export const confirmMomentsController = async (
   try {
     const userID = req.userId!;
     const { bucketID } = req.params as { bucketID: string };
-    const { frequency, startDate, momentTitleArray } = req.body as {
+    const { frequency, startDate, totalMoment, momentTitleArray } = req.body as {
       frequency: string | undefined;
       startDate: string | undefined;
+      totalMoment: number | undefined;
       momentTitleArray: string[] | undefined;
     };
 
-    // frequency 체크
-    if (!frequency || frequency.trim() === '') {
-      res.status(400).json({ message: '빈도는 필수입니다.' });
-      return;
-    }
+    const moments = momentTitleArray?.map((title) => ({ momentTitle: title.trim() }));
 
-    if (!BUCKET_FREQUENCIES.includes(frequency as typeof BUCKET_FREQUENCIES[number])) {
-      res.status(400).json({ message: `유효하지 않은 빈도입니다. 가능한 빈도: ${BUCKET_FREQUENCIES.join(', ')}` });
-      return;
-    }
-
-    // startDate 체크
-    if (!startDate || isNaN(new Date(startDate).getTime())) {
-      res.status(400).json({ message: '시작 날짜 형식이 올바르지 않습니다.' });
-      return;
-    }
-
-    // momentTitleArray 체크
-    if (!momentTitleArray || !Array.isArray(momentTitleArray) || momentTitleArray.length === 0) {
-      res.status(400).json({ message: '모멘트 목록은 필수이며 최소 1개 이상이어야 합니다.' });
-      return;
-    }
-
-    for (const title of momentTitleArray) {
-      if (!title || title.trim() === '') {
-        res.status(400).json({ message: '모멘트 제목은 필수입니다.' });
-        return;
-      }
-      if (title.trim().length > 100) {
-        res.status(400).json({ message: '모멘트 제목은 100자 이내여야 합니다.' });
-        return;
-      }
-    }
-
-    // momentTitleArray → moments 배열로 자동 변환
-    const moments = momentTitleArray.map((title) => ({ momentTitle: title.trim() }));
+    if (!validateMomentBody(frequency, startDate, totalMoment, moments, res)) return;
 
     const data = await confirmMoments({
       bucketID,
       userID,
-      frequency,
-      startDate,
-      moments,
+      frequency: frequency!,
+      startDate: startDate!,
+      totalMoment: totalMoment!,
+      moments: moments!,
     });
 
     res.status(201).json({ message: '모멘트 확정 저장 성공', data });
@@ -214,19 +201,21 @@ export const createMomentController = async (
   try {
     const userID = req.userId!;
     const { bucketID } = req.params as { bucketID: string };
-    const { frequency, startDate, moments } = req.body as {
+    const { frequency, startDate, totalMoment, moments } = req.body as {
       frequency: string | undefined;
       startDate: string | undefined;
+      totalMoment: number | undefined;
       moments: Array<{ momentTitle: string }> | undefined;
     };
 
-    if (!validateMomentBody(frequency, startDate, moments, res)) return;
+    if (!validateMomentBody(frequency, startDate, totalMoment, moments, res)) return;
 
     const data = await createMoment({
       bucketID,
       userID,
       frequency: frequency!,
       startDate: startDate!,
+      totalMoment: totalMoment!,
       moments: moments!,
     });
 
@@ -256,7 +245,6 @@ export const startNowController = async (
     next(err);
   }
 };
-
 
 // ──────────────────────────────────────────────
 // GET /api/v1/moments/:bucketID
@@ -298,7 +286,6 @@ export const getMomentDetailController = async (
   }
 };
 
-
 // ──────────────────────────────────────────────
 // PATCH /api/v1/moments/success/:momentID
 // 모멘트 달성
@@ -313,13 +300,11 @@ export const successMomentController = async (
     const { momentID } = req.params as { momentID: string };
     const { photoUrl } = req.body as { photoUrl: string | undefined };
 
-    // photoUrl 체크
     if (!photoUrl || photoUrl.trim() === '') {
       res.status(400).json({ message: '인증 사진 URL은 필수입니다.' });
       return;
     }
 
-    // URL 형식 체크
     try {
       new URL(photoUrl);
     } catch {
@@ -334,7 +319,6 @@ export const successMomentController = async (
     next(err);
   }
 };
-
 
 // ──────────────────────────────────────────────
 // GET /api/v1/moments/today
@@ -355,8 +339,6 @@ export const getTodayMomentsController = async (
     next(err);
   }
 };
-
-
 
 // ──────────────────────────────────────────────
 // DELETE /api/v1/moments/:momentID
