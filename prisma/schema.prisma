@@ -36,6 +36,8 @@ model User {
   followers      Follow[] @relation("UserFollowers")
   blocking       Block[]  @relation("UserBlocking")
   blockedByUsers Block[]  @relation("UserBlocked")
+  knocksSent     Knock[] @relation("KnockerRelation")
+  knocksReceived Knock[] @relation("ReceiverRelation")
 
   @@map("user") // MongoDB 컬렉션 이름을 "user"로 지정
 }
@@ -138,4 +140,17 @@ model Moment {
   user   User   @relation(fields: [userID], references: [id])
 
   @@map("moment")
+}
+
+
+model Knock {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  knockerID  String
+  receiverID String
+  createdAt  DateTime @default(now())
+
+  knocker  User @relation("KnockerRelation",  fields: [knockerID],  references: [id])
+  receiver User @relation("ReceiverRelation", fields: [receiverID], references: [id])
+
+  @@map("knock")
 }
